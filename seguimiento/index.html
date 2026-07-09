@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seguimiento · Eleva Lab</title>
+<script>
+  (function () {
+    const tema = localStorage.getItem('eleva_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', tema);
+  })();
+</script>
+<link rel="stylesheet" href="../assets/css/variables.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<style>
+  .buscador { margin: 20px 0 16px; }
+  .fila-comercio {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+    text-decoration: none; color: inherit;
+  }
+  .fila-comercio:hover { opacity: 0.8; text-decoration: none; }
+  .fila-comercio:last-child { border-bottom: none; }
+  .fila-comercio p.nombre { font-size: 14px; color: var(--text-primary); }
+  .fila-comercio p.detalle { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .fila-comercio .der { display: flex; align-items: center; gap: 10px; }
+</style>
+</head>
+<body>
+
+<div id="nav-top"></div>
+
+<div class="container" style="padding-top: 24px;">
+  <div class="flex-between" style="margin-bottom: 4px;">
+    <h1>Seguimiento</h1>
+    <a href="../comercios/index.html" class="btn">Ver todos los comercios</a>
+  </div>
+  <p class="muted">Comercios contactados o en proceso de seguimiento.</p>
+
+  <div class="buscador">
+    <input type="text" id="buscador" placeholder="Buscar por nombre o rubro...">
+  </div>
+
+  <div class="card">
+    <div id="listaSeguimiento">
+      <p class="muted">Cargando...</p>
+    </div>
+  </div>
+</div>
+
+<div id="nav-bottom"></div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/nav.js"></script>
+<script>
+  requireAuth('../index.html');
+  renderNav('seguimiento', '../');
+</script>
+<script src="seguimiento.js"></script>
+</body>
+</html>
