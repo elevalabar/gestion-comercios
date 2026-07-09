@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nuevo comercio · Eleva Lab</title>
+<script>
+  (function () {
+    const tema = localStorage.getItem('eleva_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', tema);
+  })();
+</script>
+<link rel="stylesheet" href="../assets/css/variables.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<style>
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div id="nav-top"></div>
+
+<div class="container" style="padding-top: 24px; max-width: 720px;">
+  <h1 style="margin-bottom: 4px;">Nuevo comercio</h1>
+  <p class="muted" style="margin-bottom: 20px;">Cargá los datos generales. El diagnóstico se completa después, desde la ficha.</p>
+
+  <div class="mensaje-error" id="msgError"></div>
+
+  <form id="formNuevo" class="card">
+    <div class="form-grid">
+      <div class="campo">
+        <label for="nombre">Nombre *</label>
+        <input type="text" id="nombre" required>
+      </div>
+      <div class="campo">
+        <label for="rubro">Rubro *</label>
+        <input type="text" id="rubro" required placeholder="Ej: Panadería, Ferretería...">
+      </div>
+      <div class="campo">
+        <label for="direccion">Dirección</label>
+        <input type="text" id="direccion">
+      </div>
+      <div class="campo">
+        <label for="telefono">Teléfono</label>
+        <input type="text" id="telefono">
+      </div>
+      <div class="campo">
+        <label for="whatsapp">WhatsApp</label>
+        <input type="text" id="whatsapp">
+      </div>
+      <div class="campo">
+        <label for="instagram">Instagram</label>
+        <input type="text" id="instagram" placeholder="@usuario o link">
+      </div>
+      <div class="campo">
+        <label for="facebook">Facebook</label>
+        <input type="text" id="facebook">
+      </div>
+      <div class="campo">
+        <label for="sitioweb">Sitio web</label>
+        <input type="text" id="sitioweb">
+      </div>
+      <div class="campo" style="grid-column: 1 / -1;">
+        <label for="maps">Google Maps (link)</label>
+        <input type="text" id="maps">
+      </div>
+    </div>
+
+    <div class="flex gap-sm" style="margin-top: 8px;">
+      <button type="submit" class="btn-primary" id="btnGuardar">Guardar y continuar</button>
+      <a href="index.html" class="btn">Cancelar</a>
+    </div>
+  </form>
+</div>
+
+<div id="nav-bottom"></div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/nav.js"></script>
+<script>
+  requireAuth('../index.html');
+  renderNav('comercios', '../');
+</script>
+<script src="nuevo.js"></script>
+</body>
+</html>
