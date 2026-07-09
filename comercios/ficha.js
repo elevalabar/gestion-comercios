@@ -79,6 +79,13 @@ function actualizarSugerencia() {
   }
 }
 
+function formatFecha(valor) {
+  if (!valor) return '-';
+  const d = new Date(valor);
+  if (isNaN(d.getTime())) return valor; // ya viene como texto no parseable, se muestra tal cual
+  return d.toLocaleDateString('es-AR');
+}
+
 async function cargarComercio() {
   const c = await apiGet('getComercio', { id: ID_COMERCIO });
 
@@ -88,7 +95,7 @@ async function cargarComercio() {
   }
 
   document.getElementById('tituloComercio').textContent = c.Nombre || 'Sin nombre';
-  document.getElementById('subtituloComercio').textContent = `${c.Rubro || ''} · alta: ${c['Fecha de alta'] || '-'}`;
+  document.getElementById('subtituloComercio').textContent = `${c.Rubro || ''} · alta: ${formatFecha(c['Fecha de alta'])}`;
 
   document.getElementById('nombre').value = c.Nombre || '';
   document.getElementById('rubro').value = c.Rubro || '';
@@ -123,7 +130,9 @@ function pintarImagenes(imgs) {
   const grid = document.getElementById('fotosGrid');
   grid.innerHTML = imgs.map(img => `
     <div class="foto-item">
-      <img src="${img.URL}" alt="foto">
+      <a href="${img.URL}" target="_blank" rel="noopener">
+        <img src="${img.URL}" alt="foto">
+      </a>
       <button type="button" data-id="${img['ID Imagen']}" class="btnEliminarFoto">✕</button>
     </div>
   `).join('');
