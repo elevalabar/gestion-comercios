@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auditoría · Eleva Lab</title>
+<script>
+  (function () {
+    const tema = localStorage.getItem('eleva_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', tema);
+  })();
+</script>
+<link rel="stylesheet" href="../assets/css/variables.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="icon" type="image/png" href="../assets/img/logo.png">
+<style>
+  .area-bloque { margin-top: 20px; }
+  .area-bloque h3 { margin-bottom: 10px; font-size: 15px; }
+  .pregunta-grid { display: grid; grid-template-columns: 1fr; gap: 0; }
+  .pregunta-fila {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .pregunta-fila:last-child { border-bottom: none; }
+  .pregunta-fila label { font-size: 13px; flex: 1; }
+  .pregunta-fila select { min-width: 120px; }
+  .barra-avance {
+    height: 6px; border-radius: 4px; background: var(--bg-card-alt);
+    overflow: hidden; margin: 12px 0 4px;
+  }
+  .barra-avance .relleno { height: 100%; background: var(--accent); transition: width .2s; }
+</style>
+</head>
+<body>
+
+<div id="nav-top"></div>
+
+<div class="container" style="padding-top: 24px; max-width: 700px; padding-bottom: 60px;">
+  <div class="flex-between" style="margin-bottom: 4px;">
+    <h1 id="tituloComercio">Cargando...</h1>
+    <a href="#" id="linkVolver">← volver a la ficha</a>
+  </div>
+  <p class="muted">Respondé Sí/No mirando el Instagram, Maps o web del comercio.</p>
+
+  <div class="barra-avance"><div class="relleno" id="relleno" style="width:0%"></div></div>
+  <p class="muted" id="textoAvance" style="font-size:12px;">0 de 0 respondidas</p>
+
+  <div id="mensaje" class="mensaje-error"></div>
+
+  <div id="areas">
+    <p class="muted">Cargando preguntas...</p>
+  </div>
+
+  <div class="flex gap-sm" style="margin-top: 24px;">
+    <button type="button" class="btn-primary" id="btnFinalizar">Finalizar auditoría y calcular score</button>
+  </div>
+</div>
+
+<div id="nav-bottom"></div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/nav.js"></script>
+<script>
+  requireAuth('../index.html');
+  renderNav('comercios', '../');
+</script>
+<script src="auditoria.js"></script>
+</body>
+</html>
