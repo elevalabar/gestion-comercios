@@ -25,8 +25,7 @@ function inyectarEstilosNav() {
     .nav-top .marca { display: flex; align-items: center; gap: 10px; }
     .nav-top .logo-mini {
       width: 26px; height: 26px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; font-size: 12px; font-weight: 500;
+      object-fit: cover;
     }
     .nav-top .marca span { font-size: 14px; font-weight: 500; }
     .nav-top .enlaces { display: flex; gap: 22px; }
@@ -77,7 +76,7 @@ function renderNav(seccionActiva, base) {
     top.className = 'nav-top';
     top.innerHTML = `
       <div class="marca">
-        <div class="logo-mini eleva-gradient">E</div>
+        <img src="${base}assets/img/logo.png" alt="Eleva Lab" class="logo-mini">
         <span>ELEVA LAB</span>
       </div>
       <div class="enlaces">
