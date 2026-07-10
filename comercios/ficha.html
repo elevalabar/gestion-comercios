@@ -15,18 +15,11 @@
 <link rel="icon" type="image/png" href="../assets/img/logo.png">
 <style>
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
-  .diag-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 16px; }
   @media (max-width: 640px) {
-    .form-grid, .diag-grid { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
   }
   .seccion { margin-top: 20px; }
   .seccion h3 { margin-bottom: 12px; }
-  .sugerencia {
-    display: flex; align-items: center; justify-content: space-between;
-    background: var(--bg-card-alt); border-radius: var(--radius);
-    padding: 10px 14px; font-size: 13px; margin-top: 8px;
-  }
-  .sugerencia button { padding: 6px 12px; font-size: 12px; }
 
   .fotos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 12px; }
   .foto-item { position: relative; border-radius: var(--radius); overflow: hidden; aspect-ratio: 1; border: 1px solid var(--border); }
@@ -36,6 +29,15 @@
     padding: 0; border-radius: 50%; font-size: 11px; line-height: 1;
     background: rgba(0,0,0,0.6); color: #fff; border: none;
   }
+
+  .fila-auditoria {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+    text-decoration: none; color: inherit;
+  }
+  .fila-auditoria:hover { opacity: 0.8; text-decoration: none; }
+  .fila-auditoria:last-child { border-bottom: none; }
+  .fila-auditoria .der { display: flex; align-items: center; gap: 10px; }
 </style>
 </head>
 <body>
@@ -69,17 +71,6 @@
     </div>
 
     <div class="card seccion">
-      <h3>Diagnóstico digital</h3>
-      <p class="muted" style="margin-bottom: 14px;">Respondé Sí/No mirando el Instagram, Maps o web del comercio.</p>
-      <div class="diag-grid" id="diagGrid"></div>
-
-      <div class="campo" style="margin-top: 14px;">
-        <label>Última publicación en redes</label>
-        <input type="text" id="ultimaPublicacion" placeholder="Ej: hace 3 meses">
-      </div>
-    </div>
-
-    <div class="card seccion">
       <h3>Oportunidades y seguimiento</h3>
       <div class="campo"><label>Observaciones</label><textarea id="observaciones" rows="2"></textarea></div>
       <div class="campo"><label>Problemas encontrados</label><textarea id="problemas" rows="2"></textarea></div>
@@ -106,11 +97,6 @@
           </select>
         </div>
       </div>
-
-      <div class="sugerencia">
-        <span id="textoSugerencia">Completá el diagnóstico para ver una sugerencia.</span>
-        <button type="button" id="btnUsarSugerencia" class="btn">Usar sugerencia</button>
-      </div>
     </div>
 
     <div class="card seccion">
@@ -123,6 +109,17 @@
       <button type="submit" class="btn-primary" id="btnGuardar">Guardar cambios</button>
     </div>
   </form>
+
+  <div class="card seccion">
+    <div class="flex-between" style="margin-bottom: 8px;">
+      <h3 style="margin-bottom:0;">Auditorías</h3>
+      <button type="button" class="btn btn-primary" id="btnIniciarAuditoria">+ Iniciar nueva auditoría</button>
+    </div>
+    <p class="muted" style="margin-bottom: 10px;">Historial de evaluaciones digitales de este comercio.</p>
+    <div id="listaAuditorias">
+      <p class="muted">Cargando...</p>
+    </div>
+  </div>
 </div>
 
 <div id="nav-bottom"></div>
