@@ -1,82 +1,17 @@
 // ─────────────────────────────────────────────
-// FICHA DE COMERCIO — diagnóstico + prioridad + fotos
+// FICHA DE COMERCIO — datos permanentes + fotos + historial de auditorías
+// (el diagnóstico ya NO vive acá, ver auditoria/)
 // ─────────────────────────────────────────────
 
 const params = new URLSearchParams(window.location.search);
 const ID_COMERCIO = params.get('id');
 
-// Cada campo del diagnóstico: id interno -> nombre exacto de columna en el Sheet
-const CAMPOS_DIAG = [
-  { id: 'sitioweb_ok',  campo: 'Tiene sitio web' },
-  { id: 'catalogo',     campo: 'Tiene catálogo' },
-  { id: 'whatsapp_ok',  campo: 'Tiene WhatsApp' },
-  { id: 'maps_ok',      campo: 'Tiene Google Maps' },
-  { id: 'fotos_prop',   campo: 'Fotos propias' },
-  { id: 'fotos_ilum',   campo: 'Fotos bien iluminadas' },
-  { id: 'fotos_recien', campo: 'Fotos recientes' },
-  { id: 'logo_colores', campo: 'Mismo logo/colores' },
-  { id: 'bio_clara',    campo: 'Nombre/rubro claro en bio' },
-  { id: 'cta',          campo: 'CTA claro' },
-  { id: 'boton_wsp',    campo: 'Botón WhatsApp visible' },
-  { id: 'horarios',     campo: 'Horarios publicados' }
-];
-
 if (!ID_COMERCIO) {
   document.getElementById('tituloComercio').textContent = 'Comercio no especificado';
 } else {
-  iniciarDiagGrid();
   cargarComercio();
   cargarImagenes();
-}
-
-function iniciarDiagGrid() {
-  const grid = document.getElementById('diagGrid');
-  grid.innerHTML = CAMPOS_DIAG.map(c => `
-    <div class="campo">
-      <label>${c.campo}</label>
-      <select id="${c.id}" class="diag-select">
-        <option value="">Sin definir</option>
-        <option value="Sí">Sí</option>
-        <option value="No">No</option>
-      </select>
-    </div>
-  `).join('');
-
-  document.querySelectorAll('.diag-select').forEach(sel => {
-    sel.addEventListener('change', actualizarSugerencia);
-  });
-
-  document.getElementById('btnUsarSugerencia').addEventListener('click', () => {
-    const sugerida = calcularPrioridadSugerida();
-    if (sugerida) document.getElementById('prioridad').value = sugerida;
-  });
-}
-
-function calcularPrioridadSugerida() {
-  const respondidos = CAMPOS_DIAG
-    .map(c => document.getElementById(c.id).value)
-    .filter(v => v !== '');
-
-  if (respondidos.length === 0) return null;
-
-  const noes = respondidos.filter(v => v === 'No').length;
-
-  if (noes >= 7) return 'Alta';
-  if (noes >= 4) return 'Media';
-  return 'Baja';
-}
-
-function actualizarSugerencia() {
-  const sugerida = calcularPrioridadSugerida();
-  const texto = document.getElementById('textoSugerencia');
-  const respondidos = CAMPOS_DIAG.map(c => document.getElementById(c.id).value).filter(v => v !== '').length;
-  const noes = CAMPOS_DIAG.map(c => document.getElementById(c.id).value).filter(v => v === 'No').length;
-
-  if (!sugerida) {
-    texto.textContent = 'Completá el diagnóstico para ver una sugerencia.';
-  } else {
-    texto.textContent = `Sugerencia automática: ${sugerida} (${noes} de ${respondidos} respondidos son "No")`;
-  }
+  cargarAuditorias();
 }
 
 function formatFecha(valor) {
@@ -106,19 +41,11 @@ async function cargarComercio() {
   document.getElementById('facebook').value = c.Facebook || '';
   document.getElementById('sitioweb').value = c['Sitio web'] || '';
   document.getElementById('maps').value = c['Google Maps'] || '';
-  document.getElementById('ultimaPublicacion').value = c['Última publicación en redes'] || '';
   document.getElementById('observaciones').value = c.Observaciones || '';
   document.getElementById('problemas').value = c['Problemas encontrados'] || '';
   document.getElementById('servicios').value = c['Servicios sugeridos'] || '';
   document.getElementById('prioridad').value = c.Prioridad || '';
   document.getElementById('estado').value = c.Estado || 'Nuevo';
-
-  CAMPOS_DIAG.forEach(campo => {
-    const val = c[campo.campo];
-    if (val === 'Sí' || val === 'No') document.getElementById(campo.id).value = val;
-  });
-
-  actualizarSugerencia();
 }
 
 async function cargarImagenes() {
@@ -184,17 +111,12 @@ document.getElementById('formFicha').addEventListener('submit', async (e) => {
     'Facebook': document.getElementById('facebook').value.trim(),
     'Sitio web': document.getElementById('sitioweb').value.trim(),
     'Google Maps': document.getElementById('maps').value.trim(),
-    'Última publicación en redes': document.getElementById('ultimaPublicacion').value.trim(),
     'Observaciones': document.getElementById('observaciones').value.trim(),
     'Problemas encontrados': document.getElementById('problemas').value.trim(),
     'Servicios sugeridos': document.getElementById('servicios').value.trim(),
     'Prioridad': document.getElementById('prioridad').value,
     'Estado': document.getElementById('estado').value
   };
-
-  CAMPOS_DIAG.forEach(c => {
-    comercio[c.campo] = document.getElementById(c.id).value;
-  });
 
   try {
     const res = await apiPost('guardarComercio', { comercio });
@@ -210,5 +132,54 @@ document.getElementById('formFicha').addEventListener('submit', async (e) => {
   } finally {
     btnGuardar.disabled = false;
     btnGuardar.textContent = 'Guardar cambios';
+  }
+});
+
+// ─────────────────────────────────────────────
+// AUDITORÍAS
+// ─────────────────────────────────────────────
+
+function badgeClaseAuditoria(estado) {
+  return estado === 'Finalizada' ? 'badge-baja' : 'badge-media';
+}
+
+async function cargarAuditorias() {
+  const lista = await apiGet('getAuditoriasPorComercio', { comercioId: ID_COMERCIO });
+  const contenedor = document.getElementById('listaAuditorias');
+
+  if (!Array.isArray(lista) || lista.length === 0) {
+    contenedor.innerHTML = '<p class="muted">Todavía no se hizo ninguna auditoría a este comercio.</p>';
+    return;
+  }
+
+  contenedor.innerHTML = lista.map(a => `
+    <a href="../auditoria/resultado.html?id=${encodeURIComponent(a.id)}" class="fila-auditoria">
+      <div>
+        <p>${formatFecha(a.fecha)}</p>
+      </div>
+      <div class="der">
+        ${a.estado === 'Finalizada' ? `<span class="muted">Score: ${a.scoreGeneral ?? '-'}</span>` : ''}
+        <span class="badge ${badgeClaseAuditoria(a.estado)}">${a.estado}</span>
+      </div>
+    </a>
+  `).join('');
+}
+
+document.getElementById('btnIniciarAuditoria').addEventListener('click', async (e) => {
+  const btn = e.target;
+  btn.disabled = true;
+  btn.textContent = 'Iniciando...';
+  try {
+    const res = await apiPost('iniciarAuditoria', { comercioId: ID_COMERCIO });
+    if (res.ok) {
+      window.location.href = `../auditoria/index.html?id=${encodeURIComponent(res.id)}`;
+    } else {
+      alert(res.error || 'No se pudo iniciar la auditoría.');
+    }
+  } catch (err) {
+    alert('No se pudo conectar con el servidor. Probá de nuevo.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '+ Iniciar nueva auditoría';
   }
 });
