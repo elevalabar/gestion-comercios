@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resultado de auditoría · Eleva Lab</title>
+<script>
+  (function () {
+    const tema = localStorage.getItem('eleva_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', tema);
+  })();
+</script>
+<link rel="stylesheet" href="../assets/css/variables.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="icon" type="image/png" href="../assets/img/logo.png">
+<style>
+  .score-general {
+    text-align: center; padding: 24px 0;
+  }
+  .score-general .numero { font-size: 48px; font-weight: 700; color: var(--accent); }
+  .score-general .label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+  .fila-area {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .fila-area:last-child { border-bottom: none; }
+  .fila-area .barra {
+    flex: 1; height: 8px; border-radius: 4px; background: var(--bg-card-alt);
+    margin: 0 14px; overflow: hidden;
+  }
+  .fila-area .barra .relleno { height: 100%; background: var(--accent); }
+  .fila-area .nombre-area { width: 110px; font-size: 13px; }
+  .fila-area .valor { width: 36px; text-align: right; font-size: 13px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div id="nav-top"></div>
+
+<div class="container" style="padding-top: 24px; max-width: 700px; padding-bottom: 60px;">
+  <div class="flex-between" style="margin-bottom: 4px;">
+    <h1 id="tituloComercio">Cargando...</h1>
+    <a href="#" id="linkVolver">← volver a la ficha</a>
+  </div>
+  <p class="muted" id="fechaAuditoria"></p>
+
+  <div class="card" style="margin-top: 16px;">
+    <div class="score-general">
+      <div class="numero" id="scoreGeneral">-</div>
+      <div class="label">Eleva Score</div>
+    </div>
+  </div>
+
+  <div class="card seccion" style="margin-top: 16px;">
+    <h3 style="margin-bottom: 10px;">Resultado por área</h3>
+    <div id="areasResultado">
+      <p class="muted">Cargando...</p>
+    </div>
+  </div>
+</div>
+
+<div id="nav-bottom"></div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/nav.js"></script>
+<script>
+  requireAuth('../index.html');
+  renderNav('comercios', '../');
+</script>
+<script src="resultado.js"></script>
+</body>
+</html>
