@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────
-// LISTADO DE COMERCIOS — con buscador en vivo
+// LISTADO DE COMERCIOS — con buscador en vivo y eliminación
 // ─────────────────────────────────────────────
 
 let TODOS_LOS_COMERCIOS = [];
@@ -27,9 +27,42 @@ function pintarLista(lista) {
       <div class="der">
         <span class="badge ${badgeClase(c.Prioridad)}">${c.Prioridad || 'Sin definir'}</span>
         <span class="muted">${c.Estado || ''}</span>
+        <button type="button" class="btn-eliminar" data-id="${c.ID}" data-nombre="${(c.Nombre || 'este comercio').replace(/"/g, '&quot;')}" title="Eliminar">✕</button>
       </div>
     </a>
   `).join('');
+
+  document.querySelectorAll('.btn-eliminar').forEach(btn => {
+    btn.addEventListener('click', onClickEliminar);
+  });
+}
+
+async function onClickEliminar(e) {
+  // el botón vive adentro del <a> de la fila: si no frenamos esto acá,
+  // el clic también navega a la ficha del comercio.
+  e.preventDefault();
+  e.stopPropagation();
+
+  const id = e.currentTarget.dataset.id;
+  const nombre = e.currentTarget.dataset.nombre;
+
+  const confirmado = confirm(`¿Eliminar "${nombre}"? Esto también borra sus fotos. No se puede deshacer.`);
+  if (!confirmado) return;
+
+  e.currentTarget.disabled = true;
+  try {
+    const res = await apiPost('eliminarComercio', { id });
+    if (res.ok) {
+      TODOS_LOS_COMERCIOS = TODOS_LOS_COMERCIOS.filter(c => c.ID !== id);
+      pintarLista(TODOS_LOS_COMERCIOS);
+    } else {
+      alert(res.error || 'No se pudo eliminar el comercio.');
+      e.currentTarget.disabled = false;
+    }
+  } catch (err) {
+    alert('No se pudo conectar con el servidor. Probá de nuevo.');
+    e.currentTarget.disabled = false;
+  }
 }
 
 async function cargarComercios() {
