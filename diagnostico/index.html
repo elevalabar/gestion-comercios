@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Diagnóstico gratuito · Eleva Lab</title>
+<title>Tu diagnóstico · Eleva Lab</title>
 <script>
   (function () {
     const tema = localStorage.getItem('eleva_theme') || 'dark';
@@ -15,59 +15,38 @@
 <link rel="icon" type="image/png" href="../assets/img/logo.png">
 <style>
   body { padding-bottom: 40px; }
-
-  .encabezado {
-    display: flex; align-items: center; gap: 10px;
-    padding: 16px 20px;
-  }
+  .encabezado { display: flex; align-items: center; gap: 10px; padding: 16px 20px; }
   .encabezado img { width: 26px; height: 26px; border-radius: 50%; }
   .encabezado span { font-size: 14px; font-weight: 500; }
 
-  .intro { max-width: 560px; margin: 0 auto; padding: 20px; text-align: center; }
-  .intro h1 { margin-bottom: 10px; }
-  .intro p { color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; }
+  .contenido { max-width: 560px; margin: 0 auto; padding: 10px 20px; }
+  .contenido h1 { margin-bottom: 6px; }
+  .contenido > p.muted { margin-bottom: 24px; }
 
-  .barra-avance {
-    height: 6px; border-radius: 4px; background: var(--bg-card-alt);
-    overflow: hidden; margin: 4px 0 6px;
+  .urgencia-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    border: 1px solid var(--border-strong); border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 6px;
   }
-  .barra-avance .relleno { height: 100%; background: var(--accent); transition: width .25s; }
-  .texto-avance { font-size: 12px; text-align: center; margin-bottom: 4px; }
+  .urgencia-label { font-size: 13px; color: var(--text-secondary); }
+  .urgencia-valor { font-size: 16px; font-weight: 700; }
+  .urgencia-nota { font-size: 12px; margin-bottom: 24px; }
 
-  .wizard { max-width: 560px; margin: 0 auto; padding: 0 20px; }
-  .bloque-titulo { margin-bottom: 16px; }
+  .categoria { margin-bottom: 20px; }
+  .categoria-header { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
+  .categoria-header .valor { font-weight: 500; }
+  .barra { height: 8px; border-radius: 4px; background: var(--bg-card-alt); overflow: hidden; }
+  .barra .relleno { height: 100%; background: var(--accent); transition: width .4s; }
 
-  .pregunta { margin-bottom: 24px; }
-  .pregunta-texto { font-size: 14px; margin-bottom: 10px; font-weight: 500; }
-  .pregunta-contador { font-size: 11px; color: var(--text-muted); font-weight: 400; }
-
-  .opciones { display: flex; flex-wrap: wrap; gap: 8px; }
-  .opcion-btn {
-    border: 1px solid var(--border-strong); background: var(--bg-card);
-    color: var(--text-primary); border-radius: 20px; padding: 9px 16px;
-    font-size: 13px; cursor: pointer; text-align: left;
+  .oportunidades { margin-top: 28px; }
+  .oportunidades ul { list-style: none; }
+  .oportunidades li {
+    padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+    display: flex; gap: 8px;
   }
-  .opcion-btn:hover { opacity: 0.85; }
-  .opcion-btn.seleccionada {
-    background: var(--accent); border-color: var(--accent); color: #fff;
-  }
-  .opcion-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .oportunidades li:last-child { border-bottom: none; }
 
-  .escala-opciones .opcion-btn { min-width: 44px; text-align: center; }
-
-  .otro-texto { margin-top: 10px; }
-
-  /* Honeypot: existe en el DOM para bots simples, invisible para humanos */
-  .campo-verif {
-    position: absolute; left: -9999px; top: -9999px;
-    width: 1px; height: 1px; overflow: hidden;
-  }
-
-  .nav-wizard { display: flex; justify-content: space-between; margin-top: 28px; gap: 10px; }
-
-  @media (max-width: 480px) {
-    .opcion-btn { font-size: 13px; padding: 8px 12px; }
-  }
+  .gracias { margin-top: 32px; text-align: center; }
 </style>
 </head>
 <body>
@@ -77,42 +56,24 @@
   <span>ELEVA LAB</span>
 </div>
 
-<div class="intro" id="intro">
-  <h1>Diagnóstico gratuito para tu negocio</h1>
-  <p>
-    Respondé estas preguntas (5 a 8 minutos) y recibí un diagnóstico simple sobre
-    tu presencia digital y organización — más algunas ideas para mejorar.
-    Tus respuestas también nos ayudan a entender qué necesitan los pequeños
-    negocios de verdad.
-  </p>
-  <button type="button" class="btn-primary" id="btnEmpezar">Empezar diagnóstico</button>
-</div>
+<div class="contenido">
+  <h1>Tu diagnóstico</h1>
+  <p class="muted">Un pantallazo simple de cómo está tu negocio hoy.</p>
 
-<div class="wizard oculto" id="wizard">
-  <div class="barra-avance"><div class="relleno" id="relleno" style="width:0%"></div></div>
-  <p class="texto-avance muted" id="textoAvance"></p>
+  <div id="urgencia"></div>
 
-  <div id="mensaje" class="mensaje-error"></div>
+  <div id="categorias"></div>
 
-  <div id="contenidoBloque"></div>
-
-  <!-- Honeypot -->
-  <div class="campo-verif" aria-hidden="true">
-    <label for="campoVerif">No completar este campo</label>
-    <input type="text" id="campoVerif" name="campoVerif" tabindex="-1" autocomplete="off">
+  <div class="oportunidades">
+    <h2>Oportunidades de mejora</h2>
+    <ul id="listaOportunidades"></ul>
   </div>
 
-  <div class="nav-wizard">
-    <button type="button" class="btn" id="btnAnterior">← Anterior</button>
-    <button type="button" class="btn-primary" id="btnSiguiente">Siguiente →</button>
+  <div class="gracias">
+    <p class="muted">Gracias por completar el diagnóstico — nos ayuda mucho a entender qué necesitan los pequeños negocios.</p>
   </div>
 </div>
 
-<div class="wizard oculto" id="cargando">
-  <p class="muted" style="text-align:center; margin-top: 40px;">Cargando diagnóstico...</p>
-</div>
-
-<script src="../assets/js/api.js"></script>
-<script src="diagnostico.js"></script>
+<script src="resultado.js"></script>
 </body>
 </html>
