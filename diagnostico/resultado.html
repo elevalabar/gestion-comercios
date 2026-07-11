@@ -23,6 +23,15 @@
   .contenido h1 { margin-bottom: 6px; }
   .contenido > p.muted { margin-bottom: 24px; }
 
+  .urgencia-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    border: 1px solid var(--border-strong); border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 6px;
+  }
+  .urgencia-label { font-size: 13px; color: var(--text-secondary); }
+  .urgencia-valor { font-size: 16px; font-weight: 700; }
+  .urgencia-nota { font-size: 12px; margin-bottom: 24px; }
+
   .categoria { margin-bottom: 20px; }
   .categoria-header { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
   .categoria-header .valor { font-weight: 500; }
@@ -50,6 +59,8 @@
 <div class="contenido">
   <h1>Tu diagnóstico</h1>
   <p class="muted">Un pantallazo simple de cómo está tu negocio hoy.</p>
+
+  <div id="urgencia"></div>
 
   <div id="categorias"></div>
 
