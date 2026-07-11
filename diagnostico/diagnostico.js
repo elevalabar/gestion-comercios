@@ -297,6 +297,7 @@ async function enviarDiagnostico() {
     if (res.ok) {
       const q = new URLSearchParams();
       Object.keys(res.puntajes || {}).forEach(cat => q.set(cat, res.puntajes[cat]));
+      if (res.nivelUrgencia) q.set('NivelUrgencia', res.nivelUrgencia);
       window.location.href = `resultado.html?${q.toString()}`;
     } else {
       mostrarErrorEnvio(res.error);
