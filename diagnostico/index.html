@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico gratuito · Eleva Lab</title>
+<script>
+  (function () {
+    const tema = localStorage.getItem('eleva_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', tema);
+  })();
+</script>
+<link rel="stylesheet" href="../assets/css/variables.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="icon" type="image/png" href="../assets/img/logo.png">
+<style>
+  body { padding-bottom: 40px; }
+
+  .encabezado {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 20px;
+  }
+  .encabezado img { width: 26px; height: 26px; border-radius: 50%; }
+  .encabezado span { font-size: 14px; font-weight: 500; }
+
+  .intro { max-width: 560px; margin: 0 auto; padding: 20px; text-align: center; }
+  .intro h1 { margin-bottom: 10px; }
+  .intro p { color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; }
+
+  .barra-avance {
+    height: 6px; border-radius: 4px; background: var(--bg-card-alt);
+    overflow: hidden; margin: 4px 0 6px;
+  }
+  .barra-avance .relleno { height: 100%; background: var(--accent); transition: width .25s; }
+  .texto-avance { font-size: 12px; text-align: center; margin-bottom: 4px; }
+
+  .wizard { max-width: 560px; margin: 0 auto; padding: 0 20px; }
+  .bloque-titulo { margin-bottom: 16px; }
+
+  .pregunta { margin-bottom: 24px; }
+  .pregunta-texto { font-size: 14px; margin-bottom: 10px; font-weight: 500; }
+  .pregunta-contador { font-size: 11px; color: var(--text-muted); font-weight: 400; }
+
+  .opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opcion-btn {
+    border: 1px solid var(--border-strong); background: var(--bg-card);
+    color: var(--text-primary); border-radius: 20px; padding: 9px 16px;
+    font-size: 13px; cursor: pointer; text-align: left;
+  }
+  .opcion-btn:hover { opacity: 0.85; }
+  .opcion-btn.seleccionada {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+  }
+  .opcion-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .escala-opciones .opcion-btn { min-width: 44px; text-align: center; }
+
+  .otro-texto { margin-top: 10px; }
+
+  /* Honeypot: existe en el DOM para bots simples, invisible para humanos */
+  .campo-verif {
+    position: absolute; left: -9999px; top: -9999px;
+    width: 1px; height: 1px; overflow: hidden;
+  }
+
+  .nav-wizard { display: flex; justify-content: space-between; margin-top: 28px; gap: 10px; }
+
+  @media (max-width: 480px) {
+    .opcion-btn { font-size: 13px; padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="encabezado">
+  <img src="../assets/img/logo.png" alt="Eleva Lab">
+  <span>ELEVA LAB</span>
+</div>
+
+<div class="intro" id="intro">
+  <h1>Diagnóstico gratuito para tu negocio</h1>
+  <p>
+    Respondé estas preguntas (5 a 8 minutos) y recibí un diagnóstico simple sobre
+    tu presencia digital y organización — más algunas ideas para mejorar.
+    Tus respuestas también nos ayudan a entender qué necesitan los pequeños
+    negocios de verdad.
+  </p>
+  <button type="button" class="btn-primary" id="btnEmpezar">Empezar diagnóstico</button>
+</div>
+
+<div class="wizard oculto" id="wizard">
+  <div class="barra-avance"><div class="relleno" id="relleno" style="width:0%"></div></div>
+  <p class="texto-avance muted" id="textoAvance"></p>
+
+  <div id="mensaje" class="mensaje-error"></div>
+
+  <div id="contenidoBloque"></div>
+
+  <!-- Honeypot -->
+  <div class="campo-verif" aria-hidden="true">
+    <label for="campoVerif">No completar este campo</label>
+    <input type="text" id="campoVerif" name="campoVerif" tabindex="-1" autocomplete="off">
+  </div>
+
+  <div class="nav-wizard">
+    <button type="button" class="btn" id="btnAnterior">← Anterior</button>
+    <button type="button" class="btn-primary" id="btnSiguiente">Siguiente →</button>
+  </div>
+</div>
+
+<div class="wizard oculto" id="cargando">
+  <p class="muted" style="text-align:center; margin-top: 40px;">Cargando diagnóstico...</p>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script src="diagnostico.js"></script>
+</body>
+</html>
