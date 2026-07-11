@@ -4,15 +4,19 @@
 // y llegan acá por query string. Si DiagReglasPuntaje todavía no tiene
 // reglas cargadas para una categoría, el valor llega vacío — se
 // muestra un mensaje neutro en vez de "0%" o "NaN%".
+//
+// Urgencia es un caso aparte: no se muestra como barra de %, sino como
+// una etiqueta (Baja/Media/Alta/Muy alta) — mide impacto/dolor, no
+// madurez del negocio.
 // ─────────────────────────────────────────────
 
-const CATEGORIAS = ['Presencia Digital', 'Organizacion', 'Ventas', 'Problema Principal'];
+const CATEGORIAS = ['Presencia Digital', 'Organizacion', 'Marketing y Captacion', 'Ventas y Gestion'];
 
 const ETIQUETAS = {
   'Presencia Digital': 'Presencia digital',
   'Organizacion': 'Organización',
-  'Ventas': 'Ventas y facturación',
-  'Problema Principal': 'Urgencia del problema principal'
+  'Marketing y Captacion': 'Marketing y captación',
+  'Ventas y Gestion': 'Ventas y gestión'
 };
 
 // Sugerencias genéricas por categoría cuando el puntaje es bajo (<50).
@@ -29,16 +33,38 @@ const SUGERENCIAS = {
     'Pasar tus pedidos de la memoria/papel a una agenda digital simple',
     'Definir un lugar único donde anotar todo (evita olvidos)'
   ],
-  'Ventas': [
+  'Marketing y Captacion': [
+    'Publicar contenido con más regularidad',
+    'Sumar un canal nuevo de captación (recomendaciones, publicidad paga)'
+  ],
+  'Ventas y Gestion': [
     'Empezar a emitir facturas de forma más consistente',
     'Llevar un registro simple de ingresos y gastos'
-  ],
-  'Problema Principal': [
-    'Este es el punto que más te está afectando hoy — conviene priorizarlo'
   ]
 };
 
+const COLOR_URGENCIA = {
+  'Baja': '#4ade80',
+  'Media': '#facc15',
+  'Alta': '#fb923c',
+  'Muy alta': '#f87171'
+};
+
 const params = new URLSearchParams(window.location.search);
+
+function pintarUrgencia() {
+  const nivel = params.get('NivelUrgencia');
+  if (!nivel) return;
+
+  const cont = document.getElementById('urgencia');
+  cont.innerHTML = `
+    <div class="urgencia-badge" style="border-color:${COLOR_URGENCIA[nivel] || '#888'}">
+      <span class="urgencia-label">Nivel de urgencia</span>
+      <span class="urgencia-valor" style="color:${COLOR_URGENCIA[nivel] || '#888'}">${nivel}</span>
+    </div>
+    <p class="muted urgencia-nota">Qué tan urgente es resolver el problema que nos contaste — no mide qué tan bien está tu negocio, sino cuánto te está doliendo hoy.</p>
+  `;
+}
 
 function pintarCategorias() {
   const cont = document.getElementById('categorias');
@@ -78,5 +104,6 @@ function pintarOportunidades() {
   lista.innerHTML = items.slice(0, 5).map(s => `<li>→ ${s}</li>`).join('');
 }
 
+pintarUrgencia();
 pintarCategorias();
 pintarOportunidades();
