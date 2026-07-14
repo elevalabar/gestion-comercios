@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resultado de Inspección Inicial · Eleva Lab</title>
+<script>
+  (function () {
+    const tema = localStorage.getItem('eleva_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', tema);
+  })();
+</script>
+<link rel="stylesheet" href="../assets/css/variables.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="icon" type="image/png" href="../assets/img/logo.png">
+<style>
+  .nivel-general { text-align: center; padding: 20px 0; }
+  .nivel-general .valor { font-size: 32px; font-weight: 700; }
+  .nivel-general .label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+  .fila-dato {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .fila-dato:last-child { border-bottom: none; }
+
+  ul.lista-simple { list-style: none; }
+  ul.lista-simple li {
+    padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  ul.lista-simple li:last-child { border-bottom: none; }
+
+  .acciones-siguientes { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<div id="nav-top"></div>
+
+<div class="container" style="padding-top: 24px; max-width: 700px; padding-bottom: 60px;">
+  <div class="flex-between" style="margin-bottom: 4px;">
+    <h1 id="tituloComercio">Cargando...</h1>
+    <a href="#" id="linkVolver">← volver a la ficha</a>
+  </div>
+  <p class="muted" id="fechaInspeccion"></p>
+
+  <div class="card" style="margin-top: 16px;">
+    <div class="nivel-general">
+      <div class="valor" id="nivelOportunidad">-</div>
+      <div class="label">Nivel de Oportunidad</div>
+    </div>
+    <div class="fila-dato">
+      <span class="muted">Prioridad Comercial</span>
+      <span id="prioridadComercial" class="badge badge-media">-</span>
+    </div>
+  </div>
+
+  <div class="card seccion" style="margin-top: 16px;">
+    <h3 style="margin-bottom: 10px;">Problemas detectados</h3>
+    <ul class="lista-simple" id="listaProblemas">
+      <p class="muted">Cargando...</p>
+    </ul>
+  </div>
+
+  <div class="card seccion" style="margin-top: 16px;">
+    <h3 style="margin-bottom: 10px;">Servicios sugeridos</h3>
+    <ul class="lista-simple" id="listaServicios">
+      <p class="muted">Cargando...</p>
+    </ul>
+  </div>
+
+  <div class="acciones-siguientes">
+    <a href="#" id="btnIrSeguimiento" class="btn">Ir a Seguimiento</a>
+    <a href="#" id="btnIniciarAuditoria" class="btn btn-primary">Iniciar Auditoría Completa</a>
+  </div>
+</div>
+
+<div id="nav-bottom"></div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/nav.js"></script>
+<script>
+  requireAuth('../index.html');
+  renderNav('comercios', '../');
+</script>
+<script src="resultado.js"></script>
+</body>
+</html>
