@@ -150,8 +150,16 @@ function badgeClaseInspeccion(estado) {
 async function cargarInspecciones() {
   const lista = await apiGet('getInspeccionesPorComercio', { idComercio: ID_COMERCIO });
   const contenedor = document.getElementById('listaInspecciones');
+  const btnIniciar = document.getElementById('btnIniciarInspeccion');
 
-  if (!Array.isArray(lista) || lista.length === 0) {
+  // Comercios cargados antes de este módulo no tienen ninguna Inspección
+  // todavía (la hoja Inspecciones simplemente no tiene filas para su ID) —
+  // nunca se asume que ya existe una. El botón cambia de texto según haya
+  // o no historial, para que quede claro que es la primera vez.
+  const hayHistorial = Array.isArray(lista) && lista.length > 0;
+  btnIniciar.textContent = hayHistorial ? '+ Iniciar nueva inspección' : 'Realizar Inspección Inicial';
+
+  if (!hayHistorial) {
     contenedor.innerHTML = '<p class="muted">Todavía no se hizo ninguna inspección inicial a este comercio.</p>';
     return;
   }
@@ -188,7 +196,7 @@ document.getElementById('btnIniciarInspeccion').addEventListener('click', async 
     alert('No se pudo conectar con el servidor. Probá de nuevo.');
   } finally {
     btn.disabled = false;
-    btn.textContent = '+ Iniciar nueva inspección';
+    cargarInspecciones(); // recalcula el texto correcto (con o sin historial) en vez de hardcodearlo acá
   }
 });
 
