@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspección Inicial · Eleva Lab</title>
+<script>
+  (function () {
+    const tema = localStorage.getItem('eleva_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', tema);
+  })();
+</script>
+<link rel="stylesheet" href="../assets/css/variables.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="icon" type="image/png" href="../assets/img/logo.png">
+<style>
+  .bloque { margin-top: 20px; }
+  .bloque h3 { margin-bottom: 14px; font-size: 15px; }
+
+  .pregunta { margin-bottom: 20px; }
+  .pregunta:last-child { margin-bottom: 0; }
+  .pregunta-texto { font-size: 13px; margin-bottom: 8px; font-weight: 500; }
+
+  .opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opcion-btn {
+    border: 1px solid var(--border-strong); background: var(--bg-card);
+    color: var(--text-primary); border-radius: 20px; padding: 8px 14px;
+    font-size: 13px; cursor: pointer; text-align: left;
+  }
+  .opcion-btn:hover { opacity: 0.85; }
+  .opcion-btn.seleccionada { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .barra-avance {
+    height: 6px; border-radius: 4px; background: var(--bg-card-alt);
+    overflow: hidden; margin: 12px 0 4px;
+  }
+  .barra-avance .relleno { height: 100%; background: var(--accent); transition: width .2s; }
+
+  .omitir-wrap { text-align: center; margin-top: 14px; }
+  .omitir-wrap a { font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div id="nav-top"></div>
+
+<div class="container" style="padding-top: 24px; max-width: 700px; padding-bottom: 60px;">
+  <div class="flex-between" style="margin-bottom: 4px;">
+    <h1 id="tituloComercio">Cargando...</h1>
+  </div>
+  <p class="muted">Evaluación rápida (2 a 5 min) mirando Google, redes y sitio web del comercio. No reemplaza la Auditoría completa.</p>
+
+  <div class="barra-avance"><div class="relleno" id="relleno" style="width:0%"></div></div>
+  <p class="muted" id="textoAvance" style="font-size:12px;">0 de 20 respondidas</p>
+
+  <div id="mensaje" class="mensaje-error"></div>
+
+  <div id="bloques">
+    <p class="muted">Cargando preguntas...</p>
+  </div>
+
+  <div class="flex gap-sm" style="margin-top: 24px;">
+    <button type="button" class="btn-primary btn-block" id="btnGenerar">Generar Análisis Inicial</button>
+  </div>
+
+  <div class="omitir-wrap">
+    <a href="#" id="linkOmitir">Omitir por ahora / continuar más tarde</a>
+  </div>
+</div>
+
+<div id="nav-bottom"></div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/nav.js"></script>
+<script>
+  requireAuth('../index.html');
+  renderNav('comercios', '../');
+</script>
+<script src="inspeccion.js"></script>
+</body>
+</html>
