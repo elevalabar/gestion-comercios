@@ -1,5 +1,6 @@
 // ─────────────────────────────────────────────
-// FICHA DE COMERCIO — datos permanentes + fotos + historial de auditorías
+// FICHA DE COMERCIO — datos permanentes + fotos + historial de
+// inspecciones iniciales + historial de auditorías
 // (el diagnóstico ya NO vive acá, ver auditoria/)
 // ─────────────────────────────────────────────
 
@@ -11,6 +12,7 @@ if (!ID_COMERCIO) {
 } else {
   cargarComercio();
   cargarImagenes();
+  cargarInspecciones();
   cargarAuditorias();
 }
 
@@ -136,6 +138,61 @@ document.getElementById('formFicha').addEventListener('submit', async (e) => {
 });
 
 // ─────────────────────────────────────────────
+// INSPECCIONES INICIALES
+// ─────────────────────────────────────────────
+
+function badgeClaseInspeccion(estado) {
+  if (estado === 'Finalizada') return 'badge-baja';
+  if (estado === 'Omitida') return 'badge-baja';
+  return 'badge-media';
+}
+
+async function cargarInspecciones() {
+  const lista = await apiGet('getInspeccionesPorComercio', { idComercio: ID_COMERCIO });
+  const contenedor = document.getElementById('listaInspecciones');
+
+  if (!Array.isArray(lista) || lista.length === 0) {
+    contenedor.innerHTML = '<p class="muted">Todavía no se hizo ninguna inspección inicial a este comercio.</p>';
+    return;
+  }
+
+  contenedor.innerHTML = lista.map(i => {
+    const href = i.estado === 'Finalizada'
+      ? `../inspeccion/resultado.html?id=${encodeURIComponent(i.id)}`
+      : `../inspeccion/index.html?id=${encodeURIComponent(i.id)}`;
+    return `
+      <a href="${href}" class="fila-auditoria">
+        <div>
+          <p>${formatFecha(i.fecha)}</p>
+        </div>
+        <div class="der">
+          ${i.estado === 'Finalizada' ? `<span class="muted">${i.nivelOportunidad || '-'} · Prioridad ${i.prioridadComercial || '-'}</span>` : ''}
+          <span class="badge ${badgeClaseInspeccion(i.estado)}">${i.estado}</span>
+        </div>
+      </a>`;
+  }).join('');
+}
+
+document.getElementById('btnIniciarInspeccion').addEventListener('click', async (e) => {
+  const btn = e.target;
+  btn.disabled = true;
+  btn.textContent = 'Iniciando...';
+  try {
+    const res = await apiPost('iniciarInspeccion', { idComercio: ID_COMERCIO });
+    if (res.ok) {
+      window.location.href = `../inspeccion/index.html?id=${encodeURIComponent(res.id)}`;
+    } else {
+      alert(res.error || 'No se pudo iniciar la inspección.');
+    }
+  } catch (err) {
+    alert('No se pudo conectar con el servidor. Probá de nuevo.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '+ Iniciar nueva inspección';
+  }
+});
+
+// ─────────────────────────────────────────────
 // AUDITORÍAS
 // ─────────────────────────────────────────────
 
@@ -144,7 +201,7 @@ function badgeClaseAuditoria(estado) {
 }
 
 async function cargarAuditorias() {
-  const lista = await apiGet('getAuditoriasPorComercio', { comercioId: ID_COMERCIO });
+  const lista = await apiGet('getAuditoriasPorComercio', { idComercio: ID_COMERCIO });
   const contenedor = document.getElementById('listaAuditorias');
 
   if (!Array.isArray(lista) || lista.length === 0) {
@@ -153,13 +210,13 @@ async function cargarAuditorias() {
   }
 
   contenedor.innerHTML = lista.map(a => `
-    <a href="../auditoria/resultado.html?id=${encodeURIComponent(a.id)}" class="fila-auditoria">
+    <a href="../auditoria/resultado.html?id=${encodeURIComponent(a['ID Auditoria'])}" class="fila-auditoria">
       <div>
-        <p>${formatFecha(a.fecha)}</p>
+        <p>${formatFecha(a['Fecha'])}</p>
       </div>
       <div class="der">
-        ${a.estado === 'Finalizada' ? `<span class="muted">Score: ${a.scoreGeneral ?? '-'}</span>` : ''}
-        <span class="badge ${badgeClaseAuditoria(a.estado)}">${a.estado}</span>
+        ${a['Estado'] === 'Finalizada' ? `<span class="muted">Score: ${a['Score General'] ?? '-'}</span>` : ''}
+        <span class="badge ${badgeClaseAuditoria(a['Estado'])}">${a['Estado']}</span>
       </div>
     </a>
   `).join('');
@@ -170,7 +227,7 @@ document.getElementById('btnIniciarAuditoria').addEventListener('click', async (
   btn.disabled = true;
   btn.textContent = 'Iniciando...';
   try {
-    const res = await apiPost('iniciarAuditoria', { comercioId: ID_COMERCIO });
+    const res = await apiPost('iniciarAuditoria', { idComercio: ID_COMERCIO });
     if (res.ok) {
       window.location.href = `../auditoria/index.html?id=${encodeURIComponent(res.id)}`;
     } else {
