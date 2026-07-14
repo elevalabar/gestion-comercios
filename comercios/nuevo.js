@@ -1,5 +1,9 @@
 // ─────────────────────────────────────────────
 // ALTA DE COMERCIO
+// Al guardar, la Inspección Inicial arranca automáticamente (es parte
+// del flujo de alta) — si iniciarInspeccion falla por algún motivo, no
+// bloqueamos: el comercio ya quedó guardado, así que mandamos igual a
+// la ficha para no dejar al usuario colgado.
 // ─────────────────────────────────────────────
 
 const form = document.getElementById('formNuevo');
@@ -26,18 +30,29 @@ form.addEventListener('submit', async (e) => {
 
   try {
     const res = await apiPost('guardarComercio', { comercio });
-    if (res.ok) {
-      // Cuando exista ficha.html, esto va a redirigir directo ahí con el id
-      // para seguir cargando el diagnóstico. Por ahora vuelve al listado.
-      window.location.href = `index.html`;
-    } else {
+    if (!res.ok) {
       msgError.textContent = res.error || 'No se pudo guardar el comercio.';
       msgError.classList.add('visible');
+      btnGuardar.disabled = false;
+      btnGuardar.textContent = 'Guardar y continuar';
+      return;
     }
+
+    try {
+      const insp = await apiPost('iniciarInspeccion', { idComercio: res.id });
+      if (insp.ok) {
+        window.location.href = `../inspeccion/index.html?id=${encodeURIComponent(insp.id)}`;
+        return;
+      }
+    } catch (err) {
+      // no se pudo iniciar la inspección automáticamente; el comercio ya
+      // quedó guardado, así que no bloqueamos al usuario acá
+    }
+
+    window.location.href = `ficha.html?id=${encodeURIComponent(res.id)}`;
   } catch (err) {
     msgError.textContent = 'No se pudo conectar con el servidor. Probá de nuevo.';
     msgError.classList.add('visible');
-  } finally {
     btnGuardar.disabled = false;
     btnGuardar.textContent = 'Guardar y continuar';
   }
