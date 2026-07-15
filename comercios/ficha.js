@@ -48,6 +48,63 @@ async function cargarComercio() {
   document.getElementById('servicios').value = c['Servicios sugeridos'] || '';
   document.getElementById('prioridad').value = c.Prioridad || '';
   document.getElementById('estado').value = c.Estado || 'Nuevo';
+
+  actualizarLinksClicables();
+}
+
+// ─────────────────────────────────────────────
+// LINKS CLICKEABLES — junto a Teléfono/WhatsApp/Instagram/Facebook/
+// Sitio web/Google Maps se muestra un botón "↗" que abre el link en una
+// pestaña nueva, sin dejar de poder editar el input de al lado.
+// ─────────────────────────────────────────────
+
+function construirLink(tipo, valorCrudo) {
+  const valor = (valorCrudo || '').trim();
+  if (!valor) return null;
+
+  const esUrlCompleta = /^https?:\/\//i.test(valor);
+
+  switch (tipo) {
+    case 'telefono':
+      return 'tel:' + valor.replace(/[^\d+]/g, '');
+    case 'whatsapp': {
+      const digitos = valor.replace(/[^\d]/g, '');
+      return digitos ? `https://wa.me/${digitos}` : null;
+    }
+    case 'instagram':
+      if (esUrlCompleta) return valor;
+      return `https://instagram.com/${valor.replace(/^@/, '')}`;
+    case 'facebook':
+      if (esUrlCompleta) return valor;
+      return `https://facebook.com/${valor.replace(/^@/, '')}`;
+    case 'sitioweb':
+    case 'maps':
+      return esUrlCompleta ? valor : `https://${valor}`;
+    default:
+      return null;
+  }
+}
+
+function actualizarLinksClicables() {
+  ['telefono', 'whatsapp', 'instagram', 'facebook', 'sitioweb', 'maps'].forEach(tipo => {
+    const input = document.getElementById(tipo);
+    const enlace = document.getElementById('enlace-' + tipo);
+    if (!input || !enlace) return;
+
+    const actualizar = () => {
+      const url = construirLink(tipo, input.value);
+      if (url) {
+        enlace.href = url;
+        enlace.style.display = '';
+      } else {
+        enlace.removeAttribute('href');
+        enlace.style.display = 'none';
+      }
+    };
+
+    actualizar();
+    input.addEventListener('input', actualizar);
+  });
 }
 
 async function cargarImagenes() {
@@ -218,16 +275,40 @@ async function cargarAuditorias() {
   }
 
   contenedor.innerHTML = lista.map(a => `
-    <a href="../auditoria/resultado.html?id=${encodeURIComponent(a['ID Auditoria'])}" class="fila-auditoria">
-      <div>
-        <p>${formatFecha(a['Fecha'])}</p>
-      </div>
-      <div class="der">
-        ${a['Estado'] === 'Finalizada' ? `<span class="muted">Score: ${a['Score General'] ?? '-'}</span>` : ''}
-        <span class="badge ${badgeClaseAuditoria(a['Estado'])}">${a['Estado']}</span>
-      </div>
-    </a>
+    <div class="fila-auditoria">
+      <a href="../auditoria/resultado.html?id=${encodeURIComponent(a['ID Auditoria'])}">
+        <div>
+          <p>${formatFecha(a['Fecha'])}</p>
+        </div>
+        <div class="der">
+          ${a['Estado'] === 'Finalizada' ? `<span class="muted">Score: ${a['Score General'] ?? '-'}</span>` : ''}
+          <span class="badge ${badgeClaseAuditoria(a['Estado'])}">${a['Estado']}</span>
+        </div>
+      </a>
+      <button type="button" class="btnEliminarAuditoria" data-id="${a['ID Auditoria']}" title="Eliminar auditoría">✕</button>
+    </div>
   `).join('');
+
+  document.querySelectorAll('.btnEliminarAuditoria').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!confirm('¿Eliminar esta auditoría? Esta acción no se puede deshacer.')) return;
+      btn.disabled = true;
+      try {
+        const res = await apiPost('eliminarAuditoria', { idAuditoria: btn.dataset.id });
+        if (res.ok) {
+          cargarAuditorias();
+        } else {
+          alert(res.error || 'No se pudo eliminar la auditoría.');
+          btn.disabled = false;
+        }
+      } catch (err) {
+        alert('No se pudo conectar con el servidor. Probá de nuevo.');
+        btn.disabled = false;
+      }
+    });
+  });
 }
 
 document.getElementById('btnIniciarAuditoria').addEventListener('click', async (e) => {
