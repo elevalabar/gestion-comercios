@@ -28,10 +28,10 @@ async function init() {
     return;
   }
 
-  ID_COMERCIO = auditoria.comercioId;
+  ID_COMERCIO = auditoria['ID Comercio'];
   RESPUESTAS = auditoria.respuestas || {};
 
-  if (auditoria.estado === 'Finalizada') {
+  if (auditoria['Estado'] === 'Finalizada') {
     window.location.href = `resultado.html?id=${encodeURIComponent(ID_AUDITORIA)}`;
     return;
   }
@@ -48,8 +48,9 @@ async function init() {
 function pintarPreguntas() {
   const porArea = {};
   PREGUNTAS.forEach(p => {
-    if (!porArea[p.area]) porArea[p.area] = [];
-    porArea[p.area].push(p);
+    const area = p['Area'];
+    if (!porArea[area]) porArea[area] = [];
+    porArea[area].push(p);
   });
 
   const contenedor = document.getElementById('areas');
@@ -59,11 +60,11 @@ function pintarPreguntas() {
       <div class="pregunta-grid">
         ${porArea[area].map(p => `
           <div class="pregunta-fila">
-            <label>${p.texto}</label>
-            <select data-pregunta-id="${p.id}" class="respuesta-select">
+            <label>${p['Texto']}</label>
+            <select data-pregunta-id="${p['ID Pregunta']}" class="respuesta-select">
               <option value="">Sin responder</option>
-              <option value="Sí" ${RESPUESTAS[p.id] === 'Sí' ? 'selected' : ''}>Sí</option>
-              <option value="No" ${RESPUESTAS[p.id] === 'No' ? 'selected' : ''}>No</option>
+              <option value="Sí" ${RESPUESTAS[p['ID Pregunta']] === 'Sí' ? 'selected' : ''}>Sí</option>
+              <option value="No" ${RESPUESTAS[p['ID Pregunta']] === 'No' ? 'selected' : ''}>No</option>
             </select>
           </div>
         `).join('')}
@@ -84,7 +85,7 @@ async function onCambiarRespuesta(e) {
 
   e.target.disabled = true;
   try {
-    await apiPost('guardarRespuesta', { auditoriaId: ID_AUDITORIA, preguntaId, respuesta });
+    await apiPost('guardarRespuesta', { idAuditoria: ID_AUDITORIA, idPregunta: preguntaId, respuesta });
   } catch (err) {
     // el guardado falló pero dejamos el valor elegido en pantalla;
     // el usuario puede reintentar cambiando el select de nuevo
@@ -95,7 +96,7 @@ async function onCambiarRespuesta(e) {
 
 function actualizarAvance() {
   const total = PREGUNTAS.length;
-  const respondidas = PREGUNTAS.filter(p => RESPUESTAS[p.id] === 'Sí' || RESPUESTAS[p.id] === 'No').length;
+  const respondidas = PREGUNTAS.filter(p => RESPUESTAS[p['ID Pregunta']] === 'Sí' || RESPUESTAS[p['ID Pregunta']] === 'No').length;
   const pct = total > 0 ? Math.round((respondidas / total) * 100) : 0;
   document.getElementById('relleno').style.width = pct + '%';
   document.getElementById('textoAvance').textContent = `${respondidas} de ${total} respondidas`;
@@ -106,7 +107,7 @@ document.getElementById('btnFinalizar').addEventListener('click', async () => {
   mensaje.classList.remove('visible');
 
   const total = PREGUNTAS.length;
-  const respondidas = PREGUNTAS.filter(p => RESPUESTAS[p.id] === 'Sí' || RESPUESTAS[p.id] === 'No').length;
+  const respondidas = PREGUNTAS.filter(p => RESPUESTAS[p['ID Pregunta']] === 'Sí' || RESPUESTAS[p['ID Pregunta']] === 'No').length;
 
   if (respondidas < total) {
     mensaje.textContent = `Todavía faltan ${total - respondidas} preguntas por responder.`;
@@ -119,7 +120,7 @@ document.getElementById('btnFinalizar').addEventListener('click', async () => {
   btn.textContent = 'Calculando score...';
 
   try {
-    const res = await apiPost('finalizarAuditoria', { auditoriaId: ID_AUDITORIA });
+    const res = await apiPost('finalizarAuditoria', { idAuditoria: ID_AUDITORIA });
     if (res.ok) {
       window.location.href = `resultado.html?id=${encodeURIComponent(ID_AUDITORIA)}`;
     } else {
