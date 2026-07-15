@@ -32,12 +32,21 @@
 
   .fila-auditoria {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 12px 0; border-bottom: 1px solid var(--border);
-    text-decoration: none; color: inherit;
+    padding: 12px 0; border-bottom: 1px solid var(--border); gap: 10px;
   }
-  .fila-auditoria:hover { opacity: 0.8; text-decoration: none; }
   .fila-auditoria:last-child { border-bottom: none; }
+  .fila-auditoria > a {
+    flex: 1; display: flex; justify-content: space-between; align-items: center;
+    text-decoration: none; color: inherit; min-width: 0;
+  }
+  .fila-auditoria > a:hover { opacity: 0.8; text-decoration: none; }
   .fila-auditoria .der { display: flex; align-items: center; gap: 10px; }
+  .btnEliminarAuditoria {
+    flex-shrink: 0; width: 26px; height: 26px; padding: 0; border-radius: 50%;
+    font-size: 12px; line-height: 1; background: rgba(0,0,0,0.15); color: inherit;
+    border: none; cursor: pointer;
+  }
+  .btnEliminarAuditoria:hover { background: rgba(200,50,50,0.35); }
 </style>
 </head>
 <body>
@@ -61,13 +70,59 @@
         <div class="campo"><label>Nombre *</label><input type="text" id="nombre" required></div>
         <div class="campo"><label>Rubro *</label><input type="text" id="rubro" required></div>
         <div class="campo"><label>Dirección</label><input type="text" id="direccion"></div>
-        <div class="campo"><label>Teléfono</label><input type="text" id="telefono"></div>
-        <div class="campo"><label>WhatsApp</label><input type="text" id="whatsapp"></div>
-        <div class="campo"><label>Instagram</label><input type="text" id="instagram"></div>
-        <div class="campo"><label>Facebook</label><input type="text" id="facebook"></div>
-        <div class="campo"><label>Sitio web</label><input type="text" id="sitioweb"></div>
-        <div class="campo" style="grid-column:1/-1;"><label>Google Maps (link)</label><input type="text" id="maps"></div>
+        <div class="campo">
+          <label>Teléfono</label>
+          <div class="campo-con-link">
+            <input type="text" id="telefono">
+            <a href="#" id="enlace-telefono" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Llamar">↗</a>
+          </div>
+        </div>
+        <div class="campo">
+          <label>WhatsApp</label>
+          <div class="campo-con-link">
+            <input type="text" id="whatsapp">
+            <a href="#" id="enlace-whatsapp" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir WhatsApp">↗</a>
+          </div>
+        </div>
+        <div class="campo">
+          <label>Instagram</label>
+          <div class="campo-con-link">
+            <input type="text" id="instagram">
+            <a href="#" id="enlace-instagram" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir Instagram">↗</a>
+          </div>
+        </div>
+        <div class="campo">
+          <label>Facebook</label>
+          <div class="campo-con-link">
+            <input type="text" id="facebook">
+            <a href="#" id="enlace-facebook" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir Facebook">↗</a>
+          </div>
+        </div>
+        <div class="campo">
+          <label>Sitio web</label>
+          <div class="campo-con-link">
+            <input type="text" id="sitioweb">
+            <a href="#" id="enlace-sitioweb" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir sitio web">↗</a>
+          </div>
+        </div>
+        <div class="campo" style="grid-column:1/-1;">
+          <label>Google Maps (link)</label>
+          <div class="campo-con-link">
+            <input type="text" id="maps">
+            <a href="#" id="enlace-maps" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir en Google Maps">↗</a>
+          </div>
+        </div>
       </div>
+      <style>
+        .campo-con-link { display:flex; align-items:center; gap:6px; }
+        .campo-con-link input { flex:1; }
+        .campo-con-link .link-abrir {
+          flex-shrink:0; display:flex; align-items:center; justify-content:center;
+          width:34px; height:34px; border-radius:6px; text-decoration:none;
+          font-size:16px; background:var(--color-primario,#7a5c3a); color:#fff;
+        }
+        .campo-con-link .link-abrir:hover { opacity:0.85; }
+      </style>
     </div>
 
     <div class="card seccion">
