@@ -37,9 +37,9 @@ async function init() {
     return;
   }
 
-  ID_COMERCIO = auditoria.comercioId;
+  ID_COMERCIO = auditoria['ID Comercio'];
 
-  if (auditoria.estado !== 'Finalizada') {
+  if (auditoria['Estado'] !== 'Finalizada') {
     // todavía no tiene score calculado, la mandamos a completarla
     window.location.href = `index.html?id=${encodeURIComponent(ID_AUDITORIA)}`;
     return;
@@ -48,14 +48,14 @@ async function init() {
   const comercio = await apiGet('getComercio', { id: ID_COMERCIO });
   document.getElementById('tituloComercio').textContent =
     `Resultado · ${comercio && comercio.Nombre ? comercio.Nombre : ''}`;
-  document.getElementById('fechaAuditoria').textContent = `Auditoría del ${formatFecha(auditoria.fecha)}`;
+  document.getElementById('fechaAuditoria').textContent = `Auditoría del ${formatFecha(auditoria['Fecha'])}`;
 
   document.getElementById('scoreGeneral').textContent =
-    auditoria.scoreGeneral !== '' && auditoria.scoreGeneral !== undefined ? auditoria.scoreGeneral : '-';
+    auditoria['Score General'] !== '' && auditoria['Score General'] !== undefined ? auditoria['Score General'] : '-';
 
   const contenedor = document.getElementById('areasResultado');
   const filas = AREAS
-    .map(area => ({ area, valor: auditoria['score' + area] }))
+    .map(area => ({ area, valor: auditoria['Score ' + area] }))
     .filter(f => f.valor !== '' && f.valor !== undefined && f.valor !== null);
 
   if (filas.length === 0) {
