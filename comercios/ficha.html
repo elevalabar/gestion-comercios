@@ -14,178 +14,370 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="icon" type="image/png" href="../assets/img/logo.png">
 <style>
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
-  @media (max-width: 640px) {
-    .form-grid { grid-template-columns: 1fr; }
+  .volver {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600; margin-bottom: 16px;
   }
+  .volver svg { width: 15px; height: 15px; }
+
+  /* ── Header del comercio ── */
+  .cabecera {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 24px;
+  }
+  @media (max-width: 860px) { .cabecera { grid-template-columns: 1fr; } }
+
+  .cabecera-principal { display: flex; gap: 18px; }
+  .foto-comercio {
+    width: 140px; height: 140px; border-radius: var(--radius-lg);
+    object-fit: cover; border: 1px solid var(--border); flex-shrink: 0;
+    background: var(--bg-card-alt);
+  }
+  .foto-comercio.placeholder {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted);
+  }
+  .foto-comercio.placeholder svg { width: 36px; height: 36px; }
+
+  .info-principal { min-width: 0; }
+  .titulo-fila { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .titulo-fila h1 { font-size: 24px; }
+  .descripcion-comercio { color: var(--text-secondary); font-size: 14px; margin: 8px 0 14px; max-width: 46ch; }
+  .meta-lista { display: flex; flex-direction: column; gap: 8px; }
+  .meta-fila { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: var(--text-secondary); }
+  .meta-fila svg { width: 15px; height: 15px; color: var(--text-muted); flex-shrink: 0; }
+
+  .panel-contacto h3 { margin-bottom: 14px; }
+  .contacto-fila {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 0; font-size: 13.5px;
+  }
+  .contacto-fila .icono-contacto {
+    width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+  }
+  .contacto-fila .icono-contacto svg { width: 14px; height: 14px; }
+  .contacto-fila a.valor { color: var(--text-primary); font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .contacto-fila a.valor:hover { color: var(--accent); }
+  .contacto-fila .abrir { color: var(--text-muted); flex-shrink: 0; }
+  .contacto-fila .abrir svg { width: 13px; height: 13px; }
+  .ic-instagram { background: linear-gradient(135deg,#f58529,#dd2a7b,#8134af); }
+  .ic-facebook { background: #1877f2; }
+  .ic-web { background: #6b7280; }
+  .ic-maps { background: linear-gradient(135deg,#34a853,#4285f4); }
+  .ic-whatsapp { background: #25d366; }
+  .ic-telefono { background: var(--accent); }
+
+  #sinContacto { font-size: 13px; }
+
+  /* ── Tabs + paneles ── */
+  .panel-tab { display: none; }
+  .panel-tab.activo { display: block; }
+
+  .grid-resumen { display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 900px) { .grid-resumen { grid-template-columns: 1fr; } }
+
+  .acciones-rapidas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  @media (max-width: 560px) { .acciones-rapidas { grid-template-columns: repeat(2, 1fr); } }
+  .accion-rapida {
+    flex-direction: column; gap: 8px; padding: 16px 10px;
+    font-size: 12.5px; font-weight: 600; color: var(--text-secondary);
+    height: auto;
+  }
+  .accion-rapida svg { width: 20px; height: 20px; color: var(--accent); }
+
+  .stat-mini { text-align: center; }
+  .stat-mini .num { font-size: 26px; font-weight: 800; }
+  .stat-mini .label { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .stats-actividad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 4px 0 6px; }
+
+  textarea[readonly], input[readonly] { background: var(--bg-card-alt); color: var(--text-secondary); }
+
+  /* ── Formulario de edición ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+  @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
   .seccion { margin-top: 20px; }
   .seccion h3 { margin-bottom: 12px; }
+  .campo-con-link { display:flex; align-items:center; gap:6px; }
+  .campo-con-link input { flex:1; }
+  .campo-con-link .link-abrir {
+    flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    width:36px; height:36px; border-radius: var(--radius-sm); text-decoration:none;
+    font-size:15px; background: var(--accent); color:#fff; border: 1px solid var(--accent);
+  }
+  .campo-con-link .link-abrir:hover { background: var(--accent-hover); }
 
-  .fotos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 12px; }
+  .fotos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-top: 12px; }
   .foto-item { position: relative; border-radius: var(--radius); overflow: hidden; aspect-ratio: 1; border: 1px solid var(--border); }
   .foto-item img { width: 100%; height: 100%; object-fit: cover; }
   .foto-item button {
-    position: absolute; top: 4px; right: 4px; width: 22px; height: 22px;
+    position: absolute; top: 5px; right: 5px; width: 22px; height: 22px;
     padding: 0; border-radius: 50%; font-size: 11px; line-height: 1;
-    background: rgba(0,0,0,0.6); color: #fff; border: none;
+    background: rgba(0,0,0,0.65); color: #fff; border: none;
   }
 
   .fila-auditoria {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 12px 0; border-bottom: 1px solid var(--border); gap: 10px;
+    padding: 13px 0; border-bottom: 1px solid var(--border); gap: 10px;
   }
   .fila-auditoria:last-child { border-bottom: none; }
   .fila-auditoria > a {
     flex: 1; display: flex; justify-content: space-between; align-items: center;
     text-decoration: none; color: inherit; min-width: 0;
   }
-  .fila-auditoria > a:hover { opacity: 0.8; text-decoration: none; }
+  .fila-auditoria > a:hover { color: inherit; }
+  .fila-auditoria > a:hover .fecha-auditoria { color: var(--accent); }
   .fila-auditoria .der { display: flex; align-items: center; gap: 10px; }
   .btnEliminarAuditoria {
     flex-shrink: 0; width: 26px; height: 26px; padding: 0; border-radius: 50%;
-    font-size: 12px; line-height: 1; background: rgba(0,0,0,0.15); color: inherit;
+    font-size: 12px; line-height: 1; background: none; color: var(--text-muted);
     border: none; cursor: pointer;
   }
-  .btnEliminarAuditoria:hover { background: rgba(200,50,50,0.35); }
+  .btnEliminarAuditoria:hover { background: var(--danger-soft); color: var(--danger); }
 </style>
 </head>
 <body>
 
 <div id="nav-top"></div>
 
-<div class="container" style="padding-top: 24px; max-width: 800px; padding-bottom: 40px;">
-  <div class="flex-between" style="margin-bottom: 4px;">
-    <h1 id="tituloComercio">Cargando...</h1>
-    <a href="index.html">← volver</a>
-  </div>
-  <p class="muted" id="subtituloComercio"></p>
+<div class="container" style="padding-top: 24px; padding-bottom: 48px;">
+
+  <a href="index.html" class="volver">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    Volver a comercios
+  </a>
 
   <div class="mensaje-error" id="msgError"></div>
 
-  <form id="formFicha">
-
-    <div class="card seccion">
-      <h3>Datos generales</h3>
-      <div class="form-grid">
-        <div class="campo"><label>Nombre *</label><input type="text" id="nombre" required></div>
-        <div class="campo"><label>Rubro *</label><input type="text" id="rubro" required></div>
-        <div class="campo"><label>Dirección</label><input type="text" id="direccion"></div>
-        <div class="campo">
-          <label>Teléfono</label>
-          <div class="campo-con-link">
-            <input type="text" id="telefono">
-            <a href="#" id="enlace-telefono" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Llamar">↗</a>
-          </div>
+  <!-- ── Vista de perfil (lectura) ── -->
+  <div class="card" id="tarjetaCabecera">
+    <div class="cabecera">
+      <div class="cabecera-principal">
+        <img class="foto-comercio" id="fotoPortada" style="display:none;" alt="">
+        <div class="foto-comercio placeholder" id="fotoPortadaVacia">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7a2 2 0 0 1 2-2h2l1.5-2h7L17 5h2a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><circle cx="12" cy="13" r="4"/></svg>
         </div>
-        <div class="campo">
-          <label>WhatsApp</label>
-          <div class="campo-con-link">
-            <input type="text" id="whatsapp">
-            <a href="#" id="enlace-whatsapp" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir WhatsApp">↗</a>
+        <div class="info-principal">
+          <div class="titulo-fila">
+            <h1 id="tituloComercio">Cargando...</h1>
+            <span class="badge badge-cliente oculto" id="badgeEstado"></span>
+            <span class="badge badge-activo oculto" id="badgePrioridad"></span>
           </div>
-        </div>
-        <div class="campo">
-          <label>Instagram</label>
-          <div class="campo-con-link">
-            <input type="text" id="instagram">
-            <a href="#" id="enlace-instagram" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir Instagram">↗</a>
-          </div>
-        </div>
-        <div class="campo">
-          <label>Facebook</label>
-          <div class="campo-con-link">
-            <input type="text" id="facebook">
-            <a href="#" id="enlace-facebook" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir Facebook">↗</a>
-          </div>
-        </div>
-        <div class="campo">
-          <label>Sitio web</label>
-          <div class="campo-con-link">
-            <input type="text" id="sitioweb">
-            <a href="#" id="enlace-sitioweb" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir sitio web">↗</a>
-          </div>
-        </div>
-        <div class="campo" style="grid-column:1/-1;">
-          <label>Google Maps (link)</label>
-          <div class="campo-con-link">
-            <input type="text" id="maps">
-            <a href="#" id="enlace-maps" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir en Google Maps">↗</a>
+          <p class="descripcion-comercio oculto" id="descripcionComercio"></p>
+          <div class="meta-lista">
+            <div class="meta-fila oculto" id="metaDireccion">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span id="txtDireccion"></span>
+            </div>
+            <div class="meta-fila oculto" id="metaRubro">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12L12 20.6a2 2 0 0 1-2.8 0l-7.8-7.8a2 2 0 0 1 0-2.8L10 1.4 20.6 12z"/><circle cx="7.5" cy="7.5" r="1"/></svg>
+              <span id="txtRubro"></span>
+            </div>
+            <div class="meta-fila">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              <span id="txtFechaAlta">Creado el —</span>
+            </div>
           </div>
         </div>
       </div>
-      <style>
-        .campo-con-link { display:flex; align-items:center; gap:6px; }
-        .campo-con-link input { flex:1; }
-        .campo-con-link .link-abrir {
-          flex-shrink:0; display:flex; align-items:center; justify-content:center;
-          width:34px; height:34px; border-radius:6px; text-decoration:none;
-          font-size:16px; background:var(--color-primario,#7a5c3a); color:#fff;
-        }
-        .campo-con-link .link-abrir:hover { opacity:0.85; }
-      </style>
-    </div>
 
-    <div class="card seccion">
-      <h3>Oportunidades y seguimiento</h3>
-      <div class="campo"><label>Observaciones</label><textarea id="observaciones" rows="2"></textarea></div>
-      <div class="campo"><label>Problemas encontrados</label><textarea id="problemas" rows="2"></textarea></div>
-      <div class="campo"><label>Servicios sugeridos</label><textarea id="servicios" rows="2"></textarea></div>
-
-      <div class="form-grid">
-        <div class="campo">
-          <label>Prioridad</label>
-          <select id="prioridad">
-            <option value="">Sin definir</option>
-            <option value="Alta">Alta</option>
-            <option value="Media">Media</option>
-            <option value="Baja">Baja</option>
-          </select>
-        </div>
-        <div class="campo">
-          <label>Estado</label>
-          <select id="estado">
-            <option value="Nuevo">Nuevo</option>
-            <option value="Contactado">Contactado</option>
-            <option value="En seguimiento">En seguimiento</option>
-            <option value="Cliente">Cliente</option>
-            <option value="Descartado">Descartado</option>
-          </select>
-        </div>
+      <div class="panel-contacto">
+        <h3>Contacto</h3>
+        <div id="listaContacto"></div>
+        <p class="muted oculto" id="sinContacto">Todavía no hay datos de contacto cargados.</p>
+        <button type="button" class="btn btn-block" id="btnEditarComercio" style="margin-top:14px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Editar comercio
+        </button>
       </div>
     </div>
+  </div>
 
-    <div class="card seccion">
-      <h3>Fotos</h3>
+  <!-- ── Tabs ── -->
+  <div class="tabs" id="tabs">
+    <button type="button" class="tab activo" data-tab="resumen">Resumen</button>
+    <button type="button" class="tab" data-tab="inspecciones">Inspecciones</button>
+    <button type="button" class="tab" data-tab="auditorias">Auditorías</button>
+    <button type="button" class="tab" data-tab="fotos">Fotos</button>
+  </div>
+
+  <!-- ── Resumen ── -->
+  <div class="panel-tab activo" data-panel="resumen">
+    <div class="acciones-rapidas" style="margin-bottom: 20px;">
+      <button type="button" class="btn accion-rapida" id="btnAccionInspeccion">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Nueva inspección
+      </button>
+      <button type="button" class="btn accion-rapida" id="btnAccionAuditoria">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+        Nueva auditoría
+      </button>
+      <button type="button" class="btn accion-rapida" id="btnAccionFoto">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.9A5 5 0 0 1 6 5.3 6 6 0 0 1 17.7 7 4.5 4.5 0 0 1 17 16H6a2 2 0 0 1-2-1.1z"/><path d="M12 12v6M9.5 14.5L12 12l2.5 2.5"/></svg>
+        Subir foto
+      </button>
+      <button type="button" class="btn accion-rapida" id="btnAccionEditar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Editar comercio
+      </button>
+    </div>
+
+    <div class="grid-resumen">
+      <div class="card">
+        <h3 style="margin-bottom:14px;">Actividad</h3>
+        <div class="stats-actividad">
+          <div class="stat-mini"><div class="num" id="statInspecciones">–</div><div class="label">Inspecciones</div></div>
+          <div class="stat-mini"><div class="num" id="statAuditorias">–</div><div class="label">Auditorías</div></div>
+          <div class="stat-mini"><div class="num" id="statScore">–</div><div class="label">Último score</div></div>
+        </div>
+        <p class="muted" id="txtUltimaActividad" style="margin-top:6px;"></p>
+      </div>
+
+      <div class="card">
+        <div class="flex-between" style="margin-bottom:10px;">
+          <h3 style="margin-bottom:0;">Notas y seguimiento</h3>
+        </div>
+        <div class="campo"><label>Observaciones</label><textarea id="viewObservaciones" rows="2" readonly></textarea></div>
+        <div class="campo"><label>Problemas encontrados</label><textarea id="viewProblemas" rows="2" readonly></textarea></div>
+        <div class="campo"><label>Servicios sugeridos</label><textarea id="viewServicios" rows="2" readonly></textarea></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Inspecciones ── -->
+  <div class="panel-tab" data-panel="inspecciones">
+    <div class="card">
+      <div class="flex-between" style="margin-bottom: 8px;">
+        <h3 style="margin-bottom:0;">Inspecciones Iniciales</h3>
+        <button type="button" class="btn btn-primary" id="btnIniciarInspeccion">Inspección Inicial</button>
+      </div>
+      <p class="muted" style="margin-bottom: 10px;">Evaluación rápida (2 a 5 min). No reemplaza la Auditoría completa.</p>
+      <div id="listaInspecciones">
+        <p class="muted">Cargando...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Auditorías ── -->
+  <div class="panel-tab" data-panel="auditorias">
+    <div class="card">
+      <div class="flex-between" style="margin-bottom: 8px;">
+        <h3 style="margin-bottom:0;">Auditorías</h3>
+        <button type="button" class="btn btn-primary" id="btnIniciarAuditoria">+ Iniciar nueva auditoría</button>
+      </div>
+      <p class="muted" style="margin-bottom: 10px;">Historial de evaluaciones digitales de este comercio.</p>
+      <div id="listaAuditorias">
+        <p class="muted">Cargando...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Fotos ── -->
+  <div class="panel-tab" data-panel="fotos">
+    <div class="card">
+      <h3 style="margin-bottom: 10px;">Fotos</h3>
       <input type="file" id="inputFoto" accept="image/*">
       <div class="fotos-grid" id="fotosGrid"></div>
     </div>
-
-    <div class="flex gap-sm" style="margin-top: 20px;">
-      <button type="submit" class="btn-primary" id="btnGuardar">Guardar cambios</button>
-    </div>
-  </form>
-
-  <div class="card seccion">
-    <div class="flex-between" style="margin-bottom: 8px;">
-      <h3 style="margin-bottom:0;">Inspecciones Iniciales</h3>
-      <button type="button" class="btn btn-primary" id="btnIniciarInspeccion">Inspección Inicial</button>
-    </div>
-    <p class="muted" style="margin-bottom: 10px;">Evaluación rápida (2 a 5 min). No reemplaza la Auditoría completa.</p>
-    <div id="listaInspecciones">
-      <p class="muted">Cargando...</p>
-    </div>
   </div>
 
-  <div class="card seccion">
-    <div class="flex-between" style="margin-bottom: 8px;">
-      <h3 style="margin-bottom:0;">Auditorías</h3>
-      <button type="button" class="btn btn-primary" id="btnIniciarAuditoria">+ Iniciar nueva auditoría</button>
-    </div>
-    <p class="muted" style="margin-bottom: 10px;">Historial de evaluaciones digitales de este comercio.</p>
-    <div id="listaAuditorias">
-      <p class="muted">Cargando...</p>
-    </div>
+  <!-- ── Edición (oculto hasta tocar "Editar comercio") ── -->
+  <div class="oculto" id="bloqueEdicion" style="margin-top:24px;">
+    <form id="formFicha">
+      <div class="card seccion">
+        <div class="flex-between" style="margin-bottom: 4px;">
+          <h3 style="margin-bottom:0;">Editar datos generales</h3>
+          <button type="button" class="icon-btn" id="btnCerrarEdicion" title="Cerrar edición">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="form-grid" style="margin-top:16px;">
+          <div class="campo"><label>Nombre *</label><input type="text" id="nombre" required></div>
+          <div class="campo"><label>Rubro *</label><input type="text" id="rubro" required></div>
+          <div class="campo"><label>Dirección</label><input type="text" id="direccion"></div>
+          <div class="campo">
+            <label>Teléfono</label>
+            <div class="campo-con-link">
+              <input type="text" id="telefono">
+              <a href="#" id="enlace-telefono" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Llamar">↗</a>
+            </div>
+          </div>
+          <div class="campo">
+            <label>WhatsApp</label>
+            <div class="campo-con-link">
+              <input type="text" id="whatsapp">
+              <a href="#" id="enlace-whatsapp" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir WhatsApp">↗</a>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Instagram</label>
+            <div class="campo-con-link">
+              <input type="text" id="instagram">
+              <a href="#" id="enlace-instagram" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir Instagram">↗</a>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Facebook</label>
+            <div class="campo-con-link">
+              <input type="text" id="facebook">
+              <a href="#" id="enlace-facebook" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir Facebook">↗</a>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Sitio web</label>
+            <div class="campo-con-link">
+              <input type="text" id="sitioweb">
+              <a href="#" id="enlace-sitioweb" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir sitio web">↗</a>
+            </div>
+          </div>
+          <div class="campo" style="grid-column:1/-1;">
+            <label>Google Maps (link)</label>
+            <div class="campo-con-link">
+              <input type="text" id="maps">
+              <a href="#" id="enlace-maps" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir en Google Maps">↗</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card seccion">
+        <h3>Oportunidades y seguimiento</h3>
+        <div class="campo"><label>Observaciones</label><textarea id="observaciones" rows="2"></textarea></div>
+        <div class="campo"><label>Problemas encontrados</label><textarea id="problemas" rows="2"></textarea></div>
+        <div class="campo"><label>Servicios sugeridos</label><textarea id="servicios" rows="2"></textarea></div>
+
+        <div class="form-grid">
+          <div class="campo">
+            <label>Prioridad</label>
+            <select id="prioridad">
+              <option value="">Sin definir</option>
+              <option value="Alta">Alta</option>
+              <option value="Media">Media</option>
+              <option value="Baja">Baja</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Estado</label>
+            <select id="estado">
+              <option value="Nuevo">Nuevo</option>
+              <option value="Contactado">Contactado</option>
+              <option value="En seguimiento">En seguimiento</option>
+              <option value="Cliente">Cliente</option>
+              <option value="Descartado">Descartado</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-sm" style="margin-top: 20px;">
+        <button type="submit" class="btn-primary" id="btnGuardar">Guardar cambios</button>
+        <button type="button" class="btn" id="btnCancelarEdicion">Cancelar</button>
+      </div>
+    </form>
   </div>
+
 </div>
 
 <div id="nav-bottom"></div>
