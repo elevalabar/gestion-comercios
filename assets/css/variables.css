@@ -1,70 +1,56 @@
 :root {
-  /* ===== Tema claro (fallback) ===== */
-  --bg-page: #f4f5f7;
+  --bg-page: #f4f4f6;
   --bg-card: #ffffff;
-  --bg-card-alt: #eef0f4;
+  --bg-card-alt: #f0f0f3;
   --bg-input: #ffffff;
-  --bg-hover: #f0f1f5;
-  --border: #e1e3e9;
-  --border-strong: #cbced7;
+  --border: #dcdce2;
+  --border-strong: #c3c3cc;
 
-  --text-primary: #14161d;
-  --text-secondary: #5c6270;
-  --text-muted: #8b909d;
+  --text-primary: #1a1b23;
+  --text-secondary: #5c5d6b;
+  --text-muted: #8a8b96;
 
-  --accent: #3b6ff2;
-  --accent-hover: #2f5cd6;
-  --accent-soft: #e8eefe;
-  --accent-text-on: #ffffff;
+  --accent: #4b6ef0;
+  --accent-hover: #3d5cd6;
+  --accent-soft: #e8ecfd;
 
-  --success: #17915a;
-  --success-soft: #e1f6ec;
-  --warning: #b5790a;
-  --warning-soft: #fbf0dc;
-  --danger: #d13c31;
-  --danger-soft: #fbeae8;
+  --success: #1d9e75;
+  --success-soft: #e1f5ee;
+  --warning: #ba7517;
+  --warning-soft: #faeeda;
+  --danger: #d85a30;
+  --danger-soft: #faece7;
 
-  --radius-sm: 8px;
   --radius: 10px;
   --radius-lg: 16px;
-  --radius-xl: 20px;
-  --shadow-card: 0 1px 2px rgba(20, 22, 29, 0.04);
-  --shadow-pop: 0 12px 32px rgba(20, 22, 29, 0.14);
-
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* ===== Tema oscuro — por defecto en toda la app ===== */
 html[data-theme="dark"] {
-  --bg-page: #090b11;
-  --bg-card: #10131b;
-  --bg-card-alt: #0c0e15;
-  --bg-input: #0c0e15;
-  --bg-hover: #171b26;
-  --border: #1e222c;
-  --border-strong: #2b303c;
+  --bg-page: #0b0c10;
+  --bg-card: #141520;
+  --bg-card-alt: #101117;
+  --bg-input: #1a1b26;
+  --border: #22242c;
+  --border-strong: #33353f;
 
-  --text-primary: #f3f4f7;
-  --text-secondary: #8a90a1;
-  --text-muted: #5c6274;
+  --text-primary: #f2f2f5;
+  --text-secondary: #9698a3;
+  --text-muted: #6b6d78;
 
-  --accent: #4b7cf7;
-  --accent-hover: #6690f9;
-  --accent-soft: #16233f;
-  --accent-text-on: #ffffff;
+  --accent: #6d8ef0;
+  --accent-hover: #8399f2;
+  --accent-soft: #1c2440;
 
-  --success: #34c778;
-  --success-soft: #123322;
-  --warning: #eab63a;
-  --warning-soft: #3a2c10;
-  --danger: #f0665a;
-  --danger-soft: #3a1a17;
-
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-pop: 0 16px 40px rgba(0, 0, 0, 0.5);
+  --success: #7fd8b0;
+  --success-soft: #1a2e26;
+  --warning: #e39a6b;
+  --warning-soft: #3a2a1a;
+  --danger: #e88b70;
+  --danger-soft: #3a201a;
 }
 
-/* Marca — usar SOLO en el ícono/logo, nunca como fondo general */
+/* Degradé del logo — usar SOLO en el ícono/marca, nunca como fondo general */
 .eleva-gradient {
-  background: linear-gradient(135deg, #4b8ef0, #3b6ff2);
+  background: linear-gradient(135deg, #4b8ef0, #8b6ef0);
 }
