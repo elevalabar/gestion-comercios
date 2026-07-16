@@ -1,199 +1,117 @@
 // ─────────────────────────────────────────────
-// FICHA DE COMERCIO — datos permanentes + fotos + historial de
-// inspecciones iniciales + historial de auditorías
-// (el diagnóstico ya NO vive acá, ver auditoria/)
+// FICHA DE COMERCIO — modo Vista (panel de control) + modo Edición
+// (el form original, intacto, se abre con "Editar información").
+// Reutiliza 100% de guardarComercio, subirImagen, iniciarAuditoria,
+// iniciarInspeccion, eliminarAuditoria tal como ya funcionaban.
 // ─────────────────────────────────────────────
 
 const params = new URLSearchParams(window.location.search);
 const ID_COMERCIO = params.get('id');
 
-// Íconos de contacto (mismo set visual que usa el resto de la app)
-const ICONOS_CONTACTO = {
-  instagram: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>',
-  facebook: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>',
-  sitioweb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg>',
-  maps: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>',
-  whatsapp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.5L3 20l1.1-5.4A8.5 8.5 0 1 1 21 11.5z"/></svg>',
-  telefono: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.7a2 2 0 0 1-.4 2.1L8 9.9a16 16 0 0 0 6 6l1.4-1.4a2 2 0 0 1 2.1-.4c.9.3 1.8.5 2.7.6a2 2 0 0 1 1.8 2.1z"/></svg>'
-};
+// AREAS del Eleva Score: deben coincidir EXACTO con la constante AREAS de
+// Code.gs (['Google','Web','WhatsApp','Redes','Catalogo','Branding']).
+// No es una lista a criterio del frontend — es la misma fuente de verdad
+// que ya usa finalizarAuditoria_() para guardar 'Score <Area>'.
+const AREAS_SCORE = [
+  { clave: 'Google', label: 'Google' },
+  { clave: 'Web', label: 'Web' },
+  { clave: 'WhatsApp', label: 'WhatsApp' },
+  { clave: 'Redes', label: 'Redes' },
+  { clave: 'Catalogo', label: 'Catálogo' },
+  { clave: 'Branding', label: 'Branding' }
+];
 
-// caches livianos para calcular estadísticas de "Actividad" sin volver a pedir datos
-let CACHE_INSPECCIONES = [];
-let CACHE_AUDITORIAS = [];
+let comercioActual = null;
+let auditoriasActuales = [];
+let inspeccionesActuales = [];
 
 if (!ID_COMERCIO) {
   document.getElementById('tituloComercio').textContent = 'Comercio no especificado';
 } else {
-  cargarComercio();
-  cargarImagenes();
-  cargarInspecciones();
-  cargarAuditorias();
+  cargarTodo();
 }
 
 function formatFecha(valor) {
   if (!valor) return '-';
   const d = new Date(valor);
-  if (isNaN(d.getTime())) return valor; // ya viene como texto no parseable, se muestra tal cual
+  if (isNaN(d.getTime())) return valor;
   return d.toLocaleDateString('es-AR');
 }
 
-async function cargarComercio() {
-  const c = await apiGet('getComercio', { id: ID_COMERCIO });
+// ─────────────────────────────────────────────
+// CARGA PRINCIPAL
+// ─────────────────────────────────────────────
+
+async function cargarTodo() {
+  const [c, auds, insps] = await Promise.all([
+    apiGet('getComercio', { id: ID_COMERCIO }),
+    apiGet('getAuditoriasPorComercio', { idComercio: ID_COMERCIO }),
+    apiGet('getInspeccionesPorComercio', { idComercio: ID_COMERCIO })
+  ]);
 
   if (!c || c.error) {
     document.getElementById('tituloComercio').textContent = 'No se encontró el comercio';
     return;
   }
 
+  comercioActual = c;
+  auditoriasActuales = Array.isArray(auds) ? auds : [];
+  inspeccionesActuales = Array.isArray(insps) ? insps : [];
+
   document.getElementById('tituloComercio').textContent = c.Nombre || 'Sin nombre';
-  document.getElementById('subtituloComercio') && (document.getElementById('subtituloComercio').textContent = `${c.Rubro || ''} · alta: ${formatFecha(c['Fecha de alta'])}`);
+  document.getElementById('subtituloComercio').textContent = `${c.Rubro || ''} · alta: ${formatFecha(c['Fecha de alta'])}`;
 
-  document.getElementById('nombre').value = c.Nombre || '';
-  document.getElementById('rubro').value = c.Rubro || '';
-  document.getElementById('direccion').value = c['Dirección'] || '';
-  document.getElementById('telefono').value = c['Teléfono'] || '';
-  document.getElementById('whatsapp').value = c.WhatsApp || '';
-  document.getElementById('instagram').value = c.Instagram || '';
-  document.getElementById('facebook').value = c.Facebook || '';
-  document.getElementById('sitioweb').value = c['Sitio web'] || '';
-  document.getElementById('maps').value = c['Google Maps'] || '';
-  document.getElementById('observaciones').value = c.Observaciones || '';
-  document.getElementById('problemas').value = c['Problemas encontrados'] || '';
-  document.getElementById('servicios').value = c['Servicios sugeridos'] || '';
-  document.getElementById('prioridad').value = c.Prioridad || '';
-  document.getElementById('estado').value = c.Estado || 'Nuevo';
+  pintarFormulario(c);
+  pintarVista(c);
+  pintarAuditoriasTab(auditoriasActuales);
+  pintarInspeccionesTab(inspeccionesActuales);
+  await pintarResumen(c, auditoriasActuales, inspeccionesActuales);
 
-  actualizarLinksClicables();
-  poblarVistaPerfil(c);
+  cargarImagenes();
 }
 
 // ─────────────────────────────────────────────
-// VISTA DE PERFIL (lectura) — arma la cabecera, el panel de contacto
-// y el resumen de notas a partir de los mismos datos que ya carga el
-// formulario. No agrega ningún dato que no exista en el comercio.
+// MODO VISTA — header del panel
 // ─────────────────────────────────────────────
 
-function poblarVistaPerfil(c) {
-  document.getElementById('tituloComercio').textContent = c.Nombre || 'Sin nombre';
-
-  const badgeEstado = document.getElementById('badgeEstado');
-  if (c.Estado) {
-    badgeEstado.textContent = c.Estado;
-    badgeEstado.classList.remove('oculto');
+function calcularEstrellas(scoreGeneral) {
+  if (scoreGeneral === '' || scoreGeneral === undefined || scoreGeneral === null) {
+    return { cantidad: 0, label: 'Todavía sin Eleva Score' };
   }
-
-  const badgePrioridad = document.getElementById('badgePrioridad');
-  if (c.Prioridad) {
-    badgePrioridad.innerHTML = `<span class="badge-dot"></span>${c.Prioridad}`;
-    badgePrioridad.className = 'badge ' + (c.Prioridad === 'Alta' ? 'badge-alta' : c.Prioridad === 'Media' ? 'badge-media' : 'badge-activo');
-    badgePrioridad.classList.remove('oculto');
-  }
-
-  const descripcion = document.getElementById('descripcionComercio');
-  if (c.Observaciones) {
-    descripcion.textContent = c.Observaciones;
-    descripcion.classList.remove('oculto');
-  }
-
-  if (c['Dirección']) {
-    document.getElementById('txtDireccion').textContent = c['Dirección'];
-    document.getElementById('metaDireccion').classList.remove('oculto');
-  }
-  if (c.Rubro) {
-    document.getElementById('txtRubro').textContent = c.Rubro;
-    document.getElementById('metaRubro').classList.remove('oculto');
-  }
-  document.getElementById('txtFechaAlta').textContent = `Creado el ${formatFecha(c['Fecha de alta'])}`;
-
-  // Panel de contacto — solo se listan los canales que tienen un valor cargado
-  const filasContacto = [
-    { tipo: 'instagram', label: c.Instagram, clase: 'ic-instagram' },
-    { tipo: 'facebook', label: c.Facebook, clase: 'ic-facebook' },
-    { tipo: 'sitioweb', label: c['Sitio web'], clase: 'ic-web' },
-    { tipo: 'maps', label: c['Google Maps'] ? 'Ver en Google Maps' : '', clase: 'ic-maps' },
-    { tipo: 'whatsapp', label: c.WhatsApp, clase: 'ic-whatsapp' },
-    { tipo: 'telefono', label: c['Teléfono'], clase: 'ic-telefono' }
-  ].filter(f => f.label);
-
-  const listaContacto = document.getElementById('listaContacto');
-  if (filasContacto.length === 0) {
-    listaContacto.innerHTML = '';
-    document.getElementById('sinContacto').classList.remove('oculto');
-  } else {
-    document.getElementById('sinContacto').classList.add('oculto');
-    listaContacto.innerHTML = filasContacto.map(f => {
-      const url = construirLink(f.tipo, f.tipo === 'maps' ? c['Google Maps'] : f.label);
-      return `
-        <div class="contacto-fila">
-          <span class="icono-contacto ${f.clase}">${ICONOS_CONTACTO[f.tipo]}</span>
-          <a class="valor" href="${url || '#'}" target="_blank" rel="noopener">${f.label}</a>
-          <span class="abrir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14L21 3"/></svg></span>
-        </div>`;
-    }).join('');
-  }
-
-  // Notas y seguimiento (misma info que el formulario, en modo lectura)
-  document.getElementById('viewObservaciones').value = c.Observaciones || 'Sin observaciones cargadas.';
-  document.getElementById('viewProblemas').value = c['Problemas encontrados'] || 'Sin problemas registrados.';
-  document.getElementById('viewServicios').value = c['Servicios sugeridos'] || 'Sin servicios sugeridos aún.';
+  const s = Number(scoreGeneral);
+  if (s >= 90) return { cantidad: 5, label: 'Excelente presencia digital' };
+  if (s >= 75) return { cantidad: 4, label: 'Buen potencial' };
+  if (s >= 60) return { cantidad: 3, label: 'Aceptable' };
+  if (s >= 40) return { cantidad: 2, label: 'Muchas oportunidades' };
+  return { cantidad: 1, label: 'Necesita intervención urgente' };
 }
 
-// ─────────────────────────────────────────────
-// TABS
-// ─────────────────────────────────────────────
-
-document.getElementById('tabs').addEventListener('click', (e) => {
-  const btn = e.target.closest('.tab');
-  if (!btn) return;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('activo'));
-  document.querySelectorAll('.panel-tab').forEach(p => p.classList.remove('activo'));
-  btn.classList.add('activo');
-  document.querySelector(`.panel-tab[data-panel="${btn.dataset.tab}"]`).classList.add('activo');
-});
-
-// ─────────────────────────────────────────────
-// TOGGLE DEL PANEL DE EDICIÓN
-// ─────────────────────────────────────────────
-
-function abrirEdicion() {
-  document.getElementById('bloqueEdicion').classList.remove('oculto');
-  document.getElementById('bloqueEdicion').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-function cerrarEdicion() {
-  document.getElementById('bloqueEdicion').classList.add('oculto');
+function renderEstrellas(cantidad) {
+  let html = '';
+  for (let i = 1; i <= 5; i++) {
+    html += i <= cantidad ? '★' : '<span class="vacia">★</span>';
+  }
+  return html;
 }
 
-document.getElementById('btnEditarComercio').addEventListener('click', abrirEdicion);
-document.getElementById('btnAccionEditar').addEventListener('click', abrirEdicion);
-document.getElementById('btnCerrarEdicion').addEventListener('click', cerrarEdicion);
-document.getElementById('btnCancelarEdicion').addEventListener('click', cerrarEdicion);
+function estadoComercialClase(estado) {
+  if (estado === 'Cliente') return 'badge-cliente';
+  if (estado === 'Descartado') return 'badge-alta';
+  if (estado === 'Contactado' || estado === 'En seguimiento') return 'badge-media';
+  return 'badge-baja'; // Nuevo
+}
 
-// Accesos rápidos del Resumen — reutilizan los botones/acciones que ya existen
-document.getElementById('btnAccionInspeccion').addEventListener('click', () => {
-  document.querySelector('.tab[data-tab="inspecciones"]').click();
-  document.getElementById('btnIniciarInspeccion').click();
-});
-document.getElementById('btnAccionAuditoria').addEventListener('click', () => {
-  document.querySelector('.tab[data-tab="auditorias"]').click();
-  document.getElementById('btnIniciarAuditoria').click();
-});
-document.getElementById('btnAccionFoto').addEventListener('click', () => {
-  document.querySelector('.tab[data-tab="fotos"]').click();
-  document.getElementById('inputFoto').click();
-});
-
-// ─────────────────────────────────────────────
-// LINKS CLICKEABLES — junto a Teléfono/WhatsApp/Instagram/Facebook/
-// Sitio web/Google Maps se muestra un botón "↗" que abre el link en una
-// pestaña nueva, sin dejar de poder editar el input de al lado.
-// ─────────────────────────────────────────────
+function estadoServicioClase(valor) {
+  if (valor === 'Activo') return 'badge-servicio-activo';
+  if (valor === 'Pausado') return 'badge-servicio-pausado';
+  if (valor === 'Finalizado') return 'badge-servicio-finalizado';
+  return 'badge-sin-servicio';
+}
 
 function construirLink(tipo, valorCrudo) {
   const valor = (valorCrudo || '').trim();
   if (!valor) return null;
-
   const esUrlCompleta = /^https?:\/\//i.test(valor);
-
   switch (tipo) {
     case 'telefono':
       return 'tel:' + valor.replace(/[^\d+]/g, '');
@@ -213,6 +131,180 @@ function construirLink(tipo, valorCrudo) {
     default:
       return null;
   }
+}
+
+function itemContacto(icono, etiqueta, valor, tipo) {
+  const url = construirLink(tipo, valor);
+  if (!url) {
+    return `<div class="contacto-item vacio"><span class="izq"><span class="icono">${icono}</span> ${etiqueta}: No registrado</span></div>`;
+  }
+  return `
+    <div class="contacto-item">
+      <span class="izq"><span class="icono">${icono}</span> <span class="valor">${valor}</span></span>
+      <a href="${url}" target="_blank" rel="noopener" class="abrir">Abrir ↗</a>
+    </div>`;
+}
+
+function pintarVista(c) {
+  document.getElementById('vistaNombre').textContent = c.Nombre || 'Sin nombre';
+  document.getElementById('vistaRubro').textContent = c.Rubro || 'Sin rubro';
+  document.getElementById('vistaDireccion').textContent = c['Dirección'] || 'No registrada';
+
+  const badgeEstado = document.getElementById('badgeEstadoComercial');
+  badgeEstado.textContent = c.Estado || 'Nuevo';
+  badgeEstado.className = 'badge badge-punto ' + estadoComercialClase(c.Estado);
+
+  const badgeServicio = document.getElementById('badgeEstadoServicio');
+  badgeServicio.textContent = c['Estado del Servicio'] || '—';
+  badgeServicio.className = 'badge badge-punto ' + estadoServicioClase(c['Estado del Servicio']);
+
+  document.getElementById('listaContactoVista').innerHTML = [
+    itemContacto('☎️', 'Teléfono', c['Teléfono'], 'telefono'),
+    itemContacto('💬', 'WhatsApp', c.WhatsApp, 'whatsapp'),
+    itemContacto('📷', 'Instagram', c.Instagram, 'instagram'),
+    itemContacto('📘', 'Facebook', c.Facebook, 'facebook'),
+    itemContacto('🌐', 'Sitio web', c['Sitio web'], 'sitioweb'),
+    itemContacto('📍', 'Google Maps', c['Google Maps'], 'maps')
+  ].join('');
+
+  document.getElementById('vistaObservaciones').textContent = (c.Observaciones || '').trim() || 'Sin notas cargadas.';
+}
+
+// ─────────────────────────────────────────────
+// RESUMEN — Eleva Score (real, AREAS de Code.gs) + Última inspección
+// ─────────────────────────────────────────────
+
+async function pintarResumen(c, auditorias, inspecciones) {
+  const auditoriaReciente = auditorias.find(a => a['Estado'] === 'Finalizada');
+  const contEleve = document.getElementById('contenidoEleveScore');
+
+  if (!auditoriaReciente) {
+    contEleve.innerHTML = '<p class="muted">Todavía no hay auditorías finalizadas para calcular el Eleva Score.</p>';
+    document.getElementById('vistaEstrellas').innerHTML = '';
+    document.getElementById('vistaEstrellasLabel').textContent = '';
+  } else {
+    const scoreGeneral = auditoriaReciente['Score General'];
+    const estrellas = calcularEstrellas(scoreGeneral);
+    document.getElementById('vistaEstrellas').innerHTML = renderEstrellas(estrellas.cantidad);
+    document.getElementById('vistaEstrellasLabel').textContent =
+      (scoreGeneral !== '' ? `${estrellas.label} · Eleva Score ${scoreGeneral}` : estrellas.label);
+
+    const barras = AREAS_SCORE.map(area => {
+      const valor = auditoriaReciente['Score ' + area.clave];
+      const num = (valor === '' || valor === undefined) ? 0 : Number(valor);
+      return `
+        <div class="barra-fila">
+          <div class="barra-label"><span>${area.label}</span><span>${valor === '' || valor === undefined ? '—' : num}</span></div>
+          <div class="barra-track"><div class="barra-fill" style="width:${num}%;"></div></div>
+        </div>`;
+    }).join('');
+
+    contEleve.innerHTML = `
+      <div class="score-card">
+        <div class="score-circulo">
+          <div class="num">${scoreGeneral !== '' ? scoreGeneral : '-'}</div>
+          <div class="den">de 100</div>
+        </div>
+        <div class="score-barras">${barras}</div>
+      </div>
+      <a href="../auditoria/resultado.html?id=${encodeURIComponent(auditoriaReciente['ID Auditoria'])}" style="display:inline-block; margin-top: 14px; font-size: 13px;">Ver auditoría completa →</a>
+    `;
+  }
+
+  const inspeccionReciente = inspecciones.find(i => i.estado === 'Finalizada');
+  const contInsp = document.getElementById('contenidoUltimaInspeccion');
+
+  if (!inspeccionReciente) {
+    contInsp.innerHTML = '<p class="muted">Todavía no se hizo ninguna inspección inicial a este comercio.</p>';
+    return;
+  }
+
+  const detalle = await apiGet('getInspeccion', { id: inspeccionReciente.id });
+  const problemas = (detalle && Array.isArray(detalle.problemasDetectados)) ? detalle.problemasDetectados : [];
+
+  const hallazgosHtml = problemas.length
+    ? problemas.map(p => {
+        const sev = inferirSeveridad(p);
+        const icono = sev === 'critico' ? '🔴' : (sev === 'importante' ? '🟡' : '🟢');
+        return `<div class="hallazgo"><span>${icono}</span> ${p}</div>`;
+      }).join('')
+    : '<p class="muted">No se detectaron problemas en la última inspección.</p>';
+
+  contInsp.innerHTML = `
+    <p class="muted" style="margin-bottom: 12px;">Realizada el ${formatFecha(detalle.fecha)}</p>
+    ${hallazgosHtml}
+    <a href="../inspeccion/resultado.html?id=${encodeURIComponent(inspeccionReciente.id)}" style="display:inline-block; margin-top: 14px; font-size: 13px;">Ver inspección →</a>
+  `;
+}
+
+// Heurística client-side, sin campo nuevo en el backend (decisión
+// aprobada: severidad inferida por ahora). Si en el futuro el motor de
+// Inspección Inicial empieza a guardar severidad explícita por regla,
+// esta función se reemplaza por leer ese dato directo.
+function inferirSeveridad(texto) {
+  const t = (texto || '').toLowerCase();
+  const critico = ['no tiene', 'no posee', 'no funciona', 'no genera confianza', 'imagen general del negocio percibida como mala'];
+  if (critico.some(k => t.indexOf(k) !== -1)) return 'critico';
+  return 'importante';
+}
+
+// ─────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('activo'));
+    tab.classList.add('activo');
+    const key = tab.dataset.tab;
+    document.querySelectorAll('.tab-panel').forEach(p => {
+      p.classList.toggle('oculto', p.dataset.tabPanel !== key);
+    });
+  });
+});
+
+// ─────────────────────────────────────────────
+// MODO VISTA <-> MODO EDICIÓN
+// ─────────────────────────────────────────────
+
+function irAModoEdicion() {
+  document.getElementById('modoVista').classList.add('oculto');
+  document.getElementById('modoEdicion').classList.remove('oculto');
+}
+
+function irAModoVista() {
+  document.getElementById('modoEdicion').classList.add('oculto');
+  document.getElementById('modoVista').classList.remove('oculto');
+}
+
+document.getElementById('btnEditar').addEventListener('click', irAModoEdicion);
+document.getElementById('btnCancelarEdicion').addEventListener('click', () => {
+  if (comercioActual) pintarFormulario(comercioActual); // descarta cambios sin guardar
+  irAModoVista();
+});
+
+// ─────────────────────────────────────────────
+// FORMULARIO DE EDICIÓN (igual que antes, + Estado del Servicio)
+// ─────────────────────────────────────────────
+
+function pintarFormulario(c) {
+  document.getElementById('nombre').value = c.Nombre || '';
+  document.getElementById('rubro').value = c.Rubro || '';
+  document.getElementById('direccion').value = c['Dirección'] || '';
+  document.getElementById('telefono').value = c['Teléfono'] || '';
+  document.getElementById('whatsapp').value = c.WhatsApp || '';
+  document.getElementById('instagram').value = c.Instagram || '';
+  document.getElementById('facebook').value = c.Facebook || '';
+  document.getElementById('sitioweb').value = c['Sitio web'] || '';
+  document.getElementById('maps').value = c['Google Maps'] || '';
+  document.getElementById('observaciones').value = c.Observaciones || '';
+  document.getElementById('problemas').value = c['Problemas encontrados'] || '';
+  document.getElementById('servicios').value = c['Servicios sugeridos'] || '';
+  document.getElementById('prioridad').value = c.Prioridad || '';
+  document.getElementById('estado').value = c.Estado || 'Nuevo';
+  document.getElementById('estadoServicio').value = c['Estado del Servicio'] || '';
+
+  actualizarLinksClicables();
 }
 
 function actualizarLinksClicables() {
@@ -237,62 +329,6 @@ function actualizarLinksClicables() {
   });
 }
 
-async function cargarImagenes() {
-  const imgs = await apiGet('getImagenes', { idComercio: ID_COMERCIO });
-  pintarImagenes(Array.isArray(imgs) ? imgs : []);
-}
-
-function pintarImagenes(imgs) {
-  const grid = document.getElementById('fotosGrid');
-  grid.innerHTML = imgs.map(img => `
-    <div class="foto-item">
-      <a href="${img.URL}" target="_blank" rel="noopener">
-        <img src="${img.URL}" alt="foto">
-      </a>
-      <button type="button" data-id="${img['ID Imagen']}" class="btnEliminarFoto">✕</button>
-    </div>
-  `).join('');
-
-  document.querySelectorAll('.btnEliminarFoto').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      await apiPost('eliminarImagen', { idImagen: btn.dataset.id });
-      cargarImagenes();
-    });
-  });
-
-  // Foto de portada en la cabecera del perfil (la primera foto cargada)
-  const portada = document.getElementById('fotoPortada');
-  const portadaVacia = document.getElementById('fotoPortadaVacia');
-  if (imgs.length > 0) {
-    portada.src = imgs[0].URL;
-    portada.style.display = '';
-    portadaVacia.style.display = 'none';
-  } else {
-    portada.style.display = 'none';
-    portadaVacia.style.display = '';
-  }
-}
-
-document.getElementById('inputFoto').addEventListener('change', async (e) => {
-  const archivo = e.target.files[0];
-  if (!archivo) return;
-
-  const lector = new FileReader();
-  lector.onload = async (ev) => {
-    const base64 = ev.target.result.split(',')[1];
-    await apiPost('subirImagen', {
-      idComercio: ID_COMERCIO,
-      nombreArchivo: archivo.name,
-      tipo: archivo.type,
-      datos: base64
-    });
-    document.getElementById('inputFoto').value = '';
-    cargarImagenes();
-  };
-  lector.readAsDataURL(archivo);
-});
-
 document.getElementById('formFicha').addEventListener('submit', async (e) => {
   e.preventDefault();
   const msgError = document.getElementById('msgError');
@@ -316,16 +352,16 @@ document.getElementById('formFicha').addEventListener('submit', async (e) => {
     'Problemas encontrados': document.getElementById('problemas').value.trim(),
     'Servicios sugeridos': document.getElementById('servicios').value.trim(),
     'Prioridad': document.getElementById('prioridad').value,
-    'Estado': document.getElementById('estado').value
+    'Estado': document.getElementById('estado').value,
+    'Estado del Servicio': document.getElementById('estadoServicio').value
   };
 
   try {
     const res = await apiPost('guardarComercio', { comercio });
     if (res.ok) {
-      // En vez de volver al listado, quedamos en la ficha con la vista de
-      // perfil ya actualizada — el guardado en sí no cambió.
-      cerrarEdicion();
-      cargarComercio();
+      // Vista -> Editar -> Guardar -> vuelve sola a Vista (no navega a index.html)
+      await cargarTodo();
+      irAModoVista();
     } else {
       msgError.textContent = res.error || 'No se pudo guardar.';
       msgError.classList.add('visible');
@@ -340,6 +376,63 @@ document.getElementById('formFicha').addEventListener('submit', async (e) => {
 });
 
 // ─────────────────────────────────────────────
+// FOTOS / ARCHIVOS
+// ─────────────────────────────────────────────
+
+async function cargarImagenes() {
+  const imgs = await apiGet('getImagenes', { idComercio: ID_COMERCIO });
+  pintarImagenes(Array.isArray(imgs) ? imgs : []);
+}
+
+function pintarImagenes(imgs) {
+  const grid = document.getElementById('fotosGridVista');
+
+  // Portada del panel izquierdo: usa la primera foto cargada, si hay.
+  const fotoPanel = document.getElementById('fotoComercioVista');
+  if (imgs.length > 0) {
+    fotoPanel.innerHTML = `<img src="${imgs[0].URL}" alt="Foto de portada">`;
+  } else {
+    fotoPanel.innerHTML = '<span class="sin-foto">Sin foto</span>';
+  }
+
+  grid.innerHTML = imgs.map(img => `
+    <div class="foto-item">
+      <a href="${img.URL}" target="_blank" rel="noopener">
+        <img src="${img.URL}" alt="foto">
+      </a>
+      <button type="button" data-id="${img['ID Imagen']}" class="btnEliminarFoto">✕</button>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.btnEliminarFoto').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      await apiPost('eliminarImagen', { idImagen: btn.dataset.id });
+      cargarImagenes();
+    });
+  });
+}
+
+document.getElementById('inputFotoVista').addEventListener('change', async (e) => {
+  const archivo = e.target.files[0];
+  if (!archivo) return;
+
+  const lector = new FileReader();
+  lector.onload = async (ev) => {
+    const base64 = ev.target.result.split(',')[1];
+    await apiPost('subirImagen', {
+      idComercio: ID_COMERCIO,
+      nombreArchivo: archivo.name,
+      tipo: archivo.type,
+      datos: base64
+    });
+    document.getElementById('inputFotoVista').value = '';
+    cargarImagenes();
+  };
+  lector.readAsDataURL(archivo);
+});
+
+// ─────────────────────────────────────────────
 // INSPECCIONES INICIALES
 // ─────────────────────────────────────────────
 
@@ -349,20 +442,12 @@ function badgeClaseInspeccion(estado) {
   return 'badge-media';
 }
 
-async function cargarInspecciones() {
-  const lista = await apiGet('getInspeccionesPorComercio', { idComercio: ID_COMERCIO });
+function pintarInspeccionesTab(lista) {
   const contenedor = document.getElementById('listaInspecciones');
   const btnIniciar = document.getElementById('btnIniciarInspeccion');
 
-  // Comercios cargados antes de este módulo no tienen ninguna Inspección
-  // todavía (la hoja Inspecciones simplemente no tiene filas para su ID) —
-  // nunca se asume que ya existe una. El botón cambia de texto según haya
-  // o no historial, para que quede claro que es la primera vez.
   const hayHistorial = Array.isArray(lista) && lista.length > 0;
   btnIniciar.textContent = hayHistorial ? '+ Iniciar nueva inspección' : 'Realizar Inspección Inicial';
-
-  CACHE_INSPECCIONES = hayHistorial ? lista : [];
-  actualizarStatsActividad();
 
   if (!hayHistorial) {
     contenedor.innerHTML = '<p class="muted">Todavía no se hizo ninguna inspección inicial a este comercio.</p>';
@@ -376,7 +461,7 @@ async function cargarInspecciones() {
     return `
       <a href="${href}" class="fila-auditoria">
         <div>
-          <p class="fecha-auditoria">${formatFecha(i.fecha)}</p>
+          <p>${formatFecha(i.fecha)}</p>
         </div>
         <div class="der">
           ${i.estado === 'Finalizada' ? `<span class="muted">${i.nivelOportunidad || '-'} · Prioridad ${i.prioridadComercial || '-'}</span>` : ''}
@@ -386,10 +471,7 @@ async function cargarInspecciones() {
   }).join('');
 }
 
-document.getElementById('btnIniciarInspeccion').addEventListener('click', async (e) => {
-  const btn = e.target;
-  btn.disabled = true;
-  btn.textContent = 'Iniciando...';
+async function iniciarInspeccion() {
   try {
     const res = await apiPost('iniciarInspeccion', { idComercio: ID_COMERCIO });
     if (res.ok) {
@@ -399,11 +481,11 @@ document.getElementById('btnIniciarInspeccion').addEventListener('click', async 
     }
   } catch (err) {
     alert('No se pudo conectar con el servidor. Probá de nuevo.');
-  } finally {
-    btn.disabled = false;
-    cargarInspecciones(); // recalcula el texto correcto (con o sin historial) en vez de hardcodearlo acá
   }
-});
+}
+
+document.getElementById('btnIniciarInspeccion').addEventListener('click', iniciarInspeccion);
+document.getElementById('btnIrInspeccionVista').addEventListener('click', iniciarInspeccion);
 
 // ─────────────────────────────────────────────
 // AUDITORÍAS
@@ -413,12 +495,8 @@ function badgeClaseAuditoria(estado) {
   return estado === 'Finalizada' ? 'badge-baja' : 'badge-media';
 }
 
-async function cargarAuditorias() {
-  const lista = await apiGet('getAuditoriasPorComercio', { idComercio: ID_COMERCIO });
+function pintarAuditoriasTab(lista) {
   const contenedor = document.getElementById('listaAuditorias');
-
-  CACHE_AUDITORIAS = Array.isArray(lista) ? lista : [];
-  actualizarStatsActividad();
 
   if (!Array.isArray(lista) || lista.length === 0) {
     contenedor.innerHTML = '<p class="muted">Todavía no se hizo ninguna auditoría a este comercio.</p>';
@@ -429,7 +507,7 @@ async function cargarAuditorias() {
     <div class="fila-auditoria">
       <a href="../auditoria/resultado.html?id=${encodeURIComponent(a['ID Auditoria'])}">
         <div>
-          <p class="fecha-auditoria">${formatFecha(a['Fecha'])}</p>
+          <p>${formatFecha(a['Fecha'])}</p>
         </div>
         <div class="der">
           ${a['Estado'] === 'Finalizada' ? `<span class="muted">Score: ${a['Score General'] ?? '-'}</span>` : ''}
@@ -449,7 +527,7 @@ async function cargarAuditorias() {
       try {
         const res = await apiPost('eliminarAuditoria', { idAuditoria: btn.dataset.id });
         if (res.ok) {
-          cargarAuditorias();
+          await cargarTodo();
         } else {
           alert(res.error || 'No se pudo eliminar la auditoría.');
           btn.disabled = false;
@@ -462,10 +540,7 @@ async function cargarAuditorias() {
   });
 }
 
-document.getElementById('btnIniciarAuditoria').addEventListener('click', async (e) => {
-  const btn = e.target;
-  btn.disabled = true;
-  btn.textContent = 'Iniciando...';
+async function iniciarAuditoria() {
   try {
     const res = await apiPost('iniciarAuditoria', { idComercio: ID_COMERCIO });
     if (res.ok) {
@@ -475,27 +550,16 @@ document.getElementById('btnIniciarAuditoria').addEventListener('click', async (
     }
   } catch (err) {
     alert('No se pudo conectar con el servidor. Probá de nuevo.');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '+ Iniciar nueva auditoría';
   }
-});
-
-// ─────────────────────────────────────────────
-// RESUMEN DE ACTIVIDAD — cuenta real de inspecciones/auditorías y
-// último score, calculado a partir de las mismas listas que ya se piden.
-// ─────────────────────────────────────────────
-
-function actualizarStatsActividad() {
-  document.getElementById('statInspecciones').textContent = CACHE_INSPECCIONES.length;
-  document.getElementById('statAuditorias').textContent = CACHE_AUDITORIAS.length;
-
-  const auditoriasFinalizadas = CACHE_AUDITORIAS.filter(a => a['Estado'] === 'Finalizada' && a['Score General'] != null);
-  const ultimaConScore = auditoriasFinalizadas[0]; // la API ya las devuelve ordenadas por fecha
-  document.getElementById('statScore').textContent = ultimaConScore ? ultimaConScore['Score General'] : '–';
-
-  const partes = [];
-  if (CACHE_AUDITORIAS[0]) partes.push(`Última auditoría: ${formatFecha(CACHE_AUDITORIAS[0]['Fecha'])}`);
-  if (CACHE_INSPECCIONES[0]) partes.push(`Última inspección: ${formatFecha(CACHE_INSPECCIONES[0].fecha)}`);
-  document.getElementById('txtUltimaActividad').textContent = partes.length ? partes.join(' · ') : 'Todavía no hay actividad registrada en este comercio.';
 }
+
+document.getElementById('btnIniciarAuditoria').addEventListener('click', iniciarAuditoria);
+document.getElementById('btnIrAuditoriaVista').addEventListener('click', iniciarAuditoria);
+
+// ─────────────────────────────────────────────
+// SEGUIMIENTO — por ahora solo linkea al módulo existente (todavía no
+// trae los datos de Seguimiento en línea acá; eso queda para la etapa
+// de "conectar tabs" con datos propios).
+// ─────────────────────────────────────────────
+
+document.getElementById('btnIrSeguimientoVista').setAttribute('href', '../seguimiento/index.html');
