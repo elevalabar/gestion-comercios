@@ -43,16 +43,22 @@ function formatFecha(valor) {
 // ─────────────────────────────────────────────
 
 async function cargarTodo() {
-  const [c, auds, insps] = await Promise.all([
-    apiGet('getComercio', { id: ID_COMERCIO }),
-    apiGet('getAuditoriasPorComercio', { idComercio: ID_COMERCIO }),
-    apiGet('getInspeccionesPorComercio', { idComercio: ID_COMERCIO })
-  ]);
+  // Antes esto hacía 4 llamadas separadas al backend (getComercio,
+  // getAuditoriasPorComercio, getInspeccionesPorComercio, getImagenes).
+  // Cada llamada a Apps Script tiene un costo fijo propio, así que 4
+  // llamadas tardaban ~4 veces más que 1. Ahora es una sola ejecución
+  // (getFichaCompleta) que junta todo del lado del servidor.
+  const datos = await apiGet('getFichaCompleta', { idComercio: ID_COMERCIO });
 
-  if (!c || c.error) {
+  if (!datos || !datos.ok) {
     document.getElementById('tituloComercio').textContent = 'No se encontró el comercio';
     return;
   }
+
+  const c = datos.comercio;
+  const auds = datos.auditorias;
+  const insps = datos.inspecciones;
+  const imgs = datos.imagenes;
 
   comercioActual = c;
   auditoriasActuales = Array.isArray(auds) ? auds : [];
@@ -67,7 +73,7 @@ async function cargarTodo() {
   pintarInspeccionesTab(inspeccionesActuales);
   await pintarResumen(c, auditoriasActuales, inspeccionesActuales);
 
-  cargarImagenes();
+  pintarImagenes(Array.isArray(imgs) ? imgs : []);
 }
 
 // ─────────────────────────────────────────────
