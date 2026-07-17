@@ -30,6 +30,8 @@
     background: rgba(0,0,0,0.6); color: #fff; border: none;
   }
 
+  .subida-foto { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
   .fila-auditoria {
     display: flex; justify-content: space-between; align-items: center;
     padding: 12px 0; border-bottom: 1px solid var(--border); gap: 10px;
@@ -261,7 +263,13 @@
           <div class="card">
             <h3 style="margin-bottom: 12px;">Archivos</h3>
             <p class="muted" style="margin-bottom: 10px;">Por ahora solo fotos. Más adelante también van a poder subirse otros archivos acá.</p>
-            <input type="file" id="inputFotoVista" accept="image/*">
+            <div class="subida-foto">
+              <input type="file" id="inputFotoVista" accept="image/*" hidden>
+              <button type="button" class="btn" id="btnElegirFoto">📷 Elegir foto</button>
+              <span id="nombreFotoElegida" class="muted"></span>
+              <button type="button" class="btn btn-primary oculto" id="btnSubirFoto">Subir foto</button>
+              <span id="estadoSubidaFoto" class="muted"></span>
+            </div>
             <div class="fotos-grid" id="fotosGridVista"></div>
           </div>
         </div>
