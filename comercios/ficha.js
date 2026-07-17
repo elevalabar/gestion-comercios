@@ -419,21 +419,59 @@ function pintarImagenes(imgs) {
   });
 }
 
-document.getElementById('inputFotoVista').addEventListener('change', async (e) => {
+let ARCHIVO_FOTO_ELEGIDO = null;
+
+document.getElementById('btnElegirFoto').addEventListener('click', () => {
+  document.getElementById('inputFotoVista').click();
+});
+
+document.getElementById('inputFotoVista').addEventListener('change', (e) => {
   const archivo = e.target.files[0];
+  ARCHIVO_FOTO_ELEGIDO = archivo || null;
+
+  document.getElementById('nombreFotoElegida').textContent = archivo ? archivo.name : '';
+  document.getElementById('btnSubirFoto').classList.toggle('oculto', !archivo);
+  document.getElementById('estadoSubidaFoto').textContent = '';
+});
+
+document.getElementById('btnSubirFoto').addEventListener('click', async () => {
+  const archivo = ARCHIVO_FOTO_ELEGIDO;
   if (!archivo) return;
+
+  const btnSubir = document.getElementById('btnSubirFoto');
+  const estado = document.getElementById('estadoSubidaFoto');
+
+  btnSubir.disabled = true;
+  estado.textContent = 'Subiendo imagen...';
 
   const lector = new FileReader();
   lector.onload = async (ev) => {
     const base64 = ev.target.result.split(',')[1];
-    await apiPost('subirImagen', {
-      idComercio: ID_COMERCIO,
-      nombreArchivo: archivo.name,
-      tipo: archivo.type,
-      datos: base64
-    });
-    document.getElementById('inputFotoVista').value = '';
-    cargarImagenes();
+    try {
+      const res = await apiPost('subirImagen', {
+        idComercio: ID_COMERCIO,
+        nombreArchivo: archivo.name,
+        tipo: archivo.type,
+        datos: base64
+      });
+
+      if (!res || res.ok === false) {
+        estado.textContent = 'No se pudo subir la imagen. Probá de nuevo.';
+        btnSubir.disabled = false;
+        return;
+      }
+
+      document.getElementById('inputFotoVista').value = '';
+      ARCHIVO_FOTO_ELEGIDO = null;
+      document.getElementById('nombreFotoElegida').textContent = '';
+      btnSubir.classList.add('oculto');
+      btnSubir.disabled = false;
+      estado.textContent = '';
+      cargarImagenes();
+    } catch (err) {
+      estado.textContent = 'No se pudo conectar con el servidor. Probá de nuevo.';
+      btnSubir.disabled = false;
+    }
   };
   lector.readAsDataURL(archivo);
 });
