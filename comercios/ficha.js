@@ -109,7 +109,7 @@ function estadoServicioClase(valor) {
 }
 
 function construirLink(tipo, valorCrudo) {
-  const valor = (valorCrudo || '').trim();
+  const valor = String(valorCrudo || '').trim();
   if (!valor) return null;
   const esUrlCompleta = /^https?:\/\//i.test(valor);
   switch (tipo) {
@@ -167,7 +167,7 @@ function pintarVista(c) {
     itemContacto('📍', 'Google Maps', c['Google Maps'], 'maps')
   ].join('');
 
-  document.getElementById('vistaObservaciones').textContent = (c.Observaciones || '').trim() || 'Sin notas cargadas.';
+  document.getElementById('vistaObservaciones').textContent = String(c.Observaciones || '').trim() || 'Sin notas cargadas.';
 }
 
 // ─────────────────────────────────────────────
