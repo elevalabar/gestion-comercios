@@ -29,8 +29,25 @@
     padding: 0; border-radius: 50%; font-size: 11px; line-height: 1;
     background: rgba(0,0,0,0.6); color: #fff; border: none;
   }
+  .foto-item .btnUsarPortada { left: 4px; right: auto; font-size: 13px; }
+  .foto-item .badge-portada {
+    position: absolute; top: 4px; left: 4px; padding: 2px 6px;
+    border-radius: var(--radius); font-size: 10px; font-weight: 600;
+    background: var(--primary, #6a5acd); color: #fff;
+  }
 
   .subida-foto { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .lista-archivos { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .archivo-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  }
+  .archivo-item a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .archivo-item button {
+    width: 22px; height: 22px; padding: 0; border-radius: 50%; font-size: 11px;
+    line-height: 1; background: rgba(0,0,0,0.6); color: #fff; border: none; flex-shrink: 0;
+  }
 
   .fila-auditoria {
     display: flex; justify-content: space-between; align-items: center;
@@ -271,6 +288,19 @@
               <span id="estadoSubidaFoto" class="muted"></span>
             </div>
             <div class="fotos-grid" id="fotosGridVista"></div>
+
+            <div class="seccion">
+              <h3>Otros archivos</h3>
+              <p class="muted" style="margin-bottom: 10px;">PDFs, Word, y cualquier otro documento del comercio (no se usan como portada).</p>
+              <div class="subida-foto">
+                <input type="file" id="inputArchivoVista" hidden>
+                <button type="button" class="btn" id="btnElegirArchivo">📎 Elegir archivo</button>
+                <span id="nombreArchivoElegido" class="muted"></span>
+                <button type="button" class="btn btn-primary oculto" id="btnSubirArchivo">Subir archivo</button>
+                <span id="estadoSubidaArchivo" class="muted"></span>
+              </div>
+              <div id="listaArchivosVista" class="lista-archivos"></div>
+            </div>
           </div>
         </div>
       </div>
