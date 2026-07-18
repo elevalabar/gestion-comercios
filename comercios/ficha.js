@@ -74,6 +74,8 @@ async function cargarTodo() {
   await pintarResumen(c, auditoriasActuales, inspeccionesActuales);
 
   pintarImagenes(Array.isArray(imgs) ? imgs : []);
+  IMAGENES_ACTUALES = Array.isArray(imgs) ? imgs : [];
+  cargarArchivos();
 }
 
 // ─────────────────────────────────────────────
@@ -385,18 +387,26 @@ document.getElementById('formFicha').addEventListener('submit', async (e) => {
 // FOTOS / ARCHIVOS
 // ─────────────────────────────────────────────
 
+let IMAGENES_ACTUALES = [];
+
 async function cargarImagenes() {
   const imgs = await apiGet('getImagenes', { idComercio: ID_COMERCIO });
-  pintarImagenes(Array.isArray(imgs) ? imgs : []);
+  IMAGENES_ACTUALES = Array.isArray(imgs) ? imgs : [];
+  pintarImagenes(IMAGENES_ACTUALES);
 }
 
 function pintarImagenes(imgs) {
   const grid = document.getElementById('fotosGridVista');
 
-  // Portada del panel izquierdo: usa la primera foto cargada, si hay.
+  // Portada: la que el usuario haya elegido manualmente (comercioActual['ID
+  // Imagen Portada']), si existe entre las fotos actuales. Si no hay ninguna
+  // elegida (o la elegida ya no existe), se usa la primera foto cargada.
+  const idPortada = comercioActual && comercioActual['ID Imagen Portada'];
+  const fotoPortada = imgs.find(img => img['ID Imagen'] === idPortada) || imgs[0];
+
   const fotoPanel = document.getElementById('fotoComercioVista');
-  if (imgs.length > 0) {
-    fotoPanel.innerHTML = `<img src="${imgs[0].URL}" alt="Foto de portada">`;
+  if (fotoPortada) {
+    fotoPanel.innerHTML = `<img src="${fotoPortada.URL}" alt="Foto de portada">`;
   } else {
     fotoPanel.innerHTML = '<span class="sin-foto">Sin foto</span>';
   }
@@ -406,14 +416,38 @@ function pintarImagenes(imgs) {
       <a href="${img.URL}" target="_blank" rel="noopener">
         <img src="${img.URL}" alt="foto">
       </a>
+      ${fotoPortada && img['ID Imagen'] === fotoPortada['ID Imagen']
+        ? '<span class="badge-portada">Portada</span>'
+        : `<button type="button" data-id="${img['ID Imagen']}" class="btnUsarPortada" title="Usar como portada">★</button>`}
       <button type="button" data-id="${img['ID Imagen']}" class="btnEliminarFoto">✕</button>
     </div>
   `).join('');
 
+  document.querySelectorAll('.btnUsarPortada').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      const res = await apiPost('guardarPortada', { idComercio: ID_COMERCIO, idImagen: btn.dataset.id });
+      if (res && res.ok) {
+        comercioActual['ID Imagen Portada'] = btn.dataset.id;
+        pintarImagenes(IMAGENES_ACTUALES);
+      } else {
+        btn.disabled = false;
+        alert((res && res.error) || 'No se pudo cambiar la portada.');
+      }
+    });
+  });
+
   document.querySelectorAll('.btnEliminarFoto').forEach(btn => {
     btn.addEventListener('click', async () => {
       btn.disabled = true;
-      await apiPost('eliminarImagen', { idImagen: btn.dataset.id });
+      btn.textContent = '…';
+      const res = await apiPost('eliminarImagen', { idImagen: btn.dataset.id });
+      if (!res || res.ok === false) {
+        btn.disabled = false;
+        btn.textContent = '✕';
+        alert((res && res.error) || 'No se pudo eliminar la foto.');
+        return;
+      }
       cargarImagenes();
     });
   });
@@ -468,6 +502,103 @@ document.getElementById('btnSubirFoto').addEventListener('click', async () => {
       btnSubir.disabled = false;
       estado.textContent = '';
       cargarImagenes();
+    } catch (err) {
+      estado.textContent = 'No se pudo conectar con el servidor. Probá de nuevo.';
+      btnSubir.disabled = false;
+    }
+  };
+  lector.readAsDataURL(archivo);
+});
+
+// ─────────────────────────────────────────────
+// OTROS ARCHIVOS (PDF, Word, etc. — no se usan como portada)
+// ─────────────────────────────────────────────
+
+async function cargarArchivos() {
+  const archivos = await apiGet('getArchivos', { idComercio: ID_COMERCIO });
+  pintarArchivos(Array.isArray(archivos) ? archivos : []);
+}
+
+function pintarArchivos(archivos) {
+  const lista = document.getElementById('listaArchivosVista');
+
+  if (archivos.length === 0) {
+    lista.innerHTML = '<p class="muted">Todavía no se subió ningún archivo.</p>';
+    return;
+  }
+
+  lista.innerHTML = archivos.map(a => `
+    <div class="archivo-item">
+      <a href="${a.URL}" target="_blank" rel="noopener">${a['Nombre Archivo'] || 'Archivo'}</a>
+      <button type="button" data-id="${a['ID Archivo']}" class="btnEliminarArchivo">✕</button>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.btnEliminarArchivo').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = '…';
+      const res = await apiPost('eliminarArchivo', { idArchivo: btn.dataset.id });
+      if (!res || res.ok === false) {
+        btn.disabled = false;
+        btn.textContent = '✕';
+        alert((res && res.error) || 'No se pudo eliminar el archivo.');
+        return;
+      }
+      cargarArchivos();
+    });
+  });
+}
+
+let ARCHIVO_ELEGIDO = null;
+
+document.getElementById('btnElegirArchivo').addEventListener('click', () => {
+  document.getElementById('inputArchivoVista').click();
+});
+
+document.getElementById('inputArchivoVista').addEventListener('change', (e) => {
+  const archivo = e.target.files[0];
+  ARCHIVO_ELEGIDO = archivo || null;
+
+  document.getElementById('nombreArchivoElegido').textContent = archivo ? archivo.name : '';
+  document.getElementById('btnSubirArchivo').classList.toggle('oculto', !archivo);
+  document.getElementById('estadoSubidaArchivo').textContent = '';
+});
+
+document.getElementById('btnSubirArchivo').addEventListener('click', async () => {
+  const archivo = ARCHIVO_ELEGIDO;
+  if (!archivo) return;
+
+  const btnSubir = document.getElementById('btnSubirArchivo');
+  const estado = document.getElementById('estadoSubidaArchivo');
+
+  btnSubir.disabled = true;
+  estado.textContent = 'Subiendo archivo...';
+
+  const lector = new FileReader();
+  lector.onload = async (ev) => {
+    const base64 = ev.target.result.split(',')[1];
+    try {
+      const res = await apiPost('subirArchivo', {
+        idComercio: ID_COMERCIO,
+        nombreArchivo: archivo.name,
+        tipo: archivo.type,
+        datos: base64
+      });
+
+      if (!res || res.ok === false) {
+        estado.textContent = 'No se pudo subir el archivo. Probá de nuevo.';
+        btnSubir.disabled = false;
+        return;
+      }
+
+      document.getElementById('inputArchivoVista').value = '';
+      ARCHIVO_ELEGIDO = null;
+      document.getElementById('nombreArchivoElegido').textContent = '';
+      btnSubir.classList.add('oculto');
+      btnSubir.disabled = false;
+      estado.textContent = '';
+      cargarArchivos();
     } catch (err) {
       estado.textContent = 'No se pudo conectar con el servidor. Probá de nuevo.';
       btnSubir.disabled = false;
