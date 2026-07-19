@@ -14,52 +14,135 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="icon" type="image/png" href="../assets/img/logo.png">
 <style>
-  .bloque { margin-top: 20px; }
-  .bloque h3 { margin-bottom: 14px; font-size: 15px; }
+  /* ── Colores por bloque (locales a esta página) ── */
+  .bloque-card { --bloque-color: var(--accent); }
+  .bloque-card[data-bloque="Google Business"] { --bloque-color: #e8b23d; }
+  .bloque-card[data-bloque="Sitio Web"]       { --bloque-color: #4b8ef0; }
+  .bloque-card[data-bloque="Instagram"]       { --bloque-color: #d6459f; }
+  .bloque-card[data-bloque="Facebook"]        { --bloque-color: #4267ea; }
+  .bloque-card[data-bloque="Contacto"]        { --bloque-color: #3ecf8e; }
+  .bloque-card[data-bloque="Imagen"]          { --bloque-color: #a78bfa; }
 
-  .pregunta { margin-bottom: 20px; }
-  .pregunta:last-child { margin-bottom: 0; }
-  .pregunta-texto { font-size: 13px; margin-bottom: 8px; font-weight: 500; }
+  /* ── Encabezado ── */
+  .insp-eyebrow {
+    font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 4px;
+  }
+  .insp-nombre { font-size: 24px; font-weight: 600; margin-bottom: 6px; }
+  .insp-descripcion { font-size: 13px; color: var(--text-secondary); max-width: 560px; }
 
-  .opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+  .insp-progress { margin-top: 20px; }
+  .insp-progress-track {
+    height: 10px; border-radius: 20px; background: var(--bg-card-alt);
+    overflow: hidden; border: 1px solid var(--border);
+  }
+  .insp-progress-fill {
+    height: 100%; width: 0%; border-radius: 20px;
+    transition: width .35s cubic-bezier(.4,0,.2,1);
+  }
+  .insp-progress-meta {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-top: 8px; font-size: 13px; color: var(--text-secondary);
+  }
+  .insp-progress-meta .pct { font-weight: 600; color: var(--text-primary); }
+
+  /* ── Grid de bloques ── */
+  .bloques-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 20px;
+    margin-top: 28px;
+  }
+
+  .bloque-card {
+    padding: 0;
+    overflow: hidden;
+    transition: box-shadow .2s ease;
+    animation: aparecer .25s ease both;
+  }
+  .bloque-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.18); }
+
+  .bloque-card-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bloque-color) 10%, transparent), transparent);
+  }
+  .bloque-icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    background: color-mix(in srgb, var(--bloque-color) 18%, transparent);
+    flex-shrink: 0;
+  }
+  .bloque-card-header h3 { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+  .bloque-card-header .bloque-contador { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+
+  .pregunta-list { padding: 4px 18px 12px; }
+  .pregunta-row { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .pregunta-row:last-child { border-bottom: none; }
+  .pregunta-cabecera { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+  .pregunta-texto { font-size: 13.5px; flex: 1; line-height: 1.4; }
+
+  .guardado-check {
+    font-size: 11px; font-weight: 600; color: var(--success);
+    opacity: 0; transition: opacity .25s ease; white-space: nowrap; flex-shrink: 0;
+  }
+  .guardado-check.visible { opacity: 1; }
+
+  /* ── Opciones (segmented generalizado: color por posición, rojo→verde) ── */
+  .opciones { display: flex; flex-wrap: wrap; gap: 6px; }
   .opcion-btn {
-    border: 1px solid var(--border-strong); background: var(--bg-card);
-    color: var(--text-primary); border-radius: 20px; padding: 8px 14px;
-    font-size: 13px; cursor: pointer; text-align: left;
+    border: 1px solid var(--border-strong); background: var(--bg-card-alt);
+    color: var(--text-secondary); border-radius: 20px; padding: 6px 13px;
+    font-size: 12.5px; font-weight: 500; cursor: pointer; text-align: left;
+    transition: background .15s ease, color .15s ease, border-color .15s ease, transform .1s ease;
   }
-  .opcion-btn:hover { opacity: 0.85; }
-  .opcion-btn.seleccionada { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .opcion-btn:hover:not(.seleccionada):not(:disabled) { background: var(--bg-input); }
+  .opcion-btn:active { transform: scale(0.97); }
+  .opcion-btn.seleccionada { color: #fff; font-weight: 600; }
+  .opcion-btn:disabled { opacity: .55; cursor: default; }
 
-  .barra-avance {
-    height: 6px; border-radius: 4px; background: var(--bg-card-alt);
-    overflow: hidden; margin: 12px 0 4px;
-  }
-  .barra-avance .relleno { height: 100%; background: var(--accent); transition: width .2s; }
-
-  .omitir-wrap { text-align: center; margin-top: 14px; }
+  .omitir-wrap { text-align: center; margin-top: 28px; }
   .omitir-wrap a { font-size: 13px; }
+
+  @keyframes aparecer {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bloque-card, .insp-progress-fill, .opcion-btn, .guardado-check { transition: none; animation: none; }
+  }
 </style>
 </head>
 <body>
 
 <div id="nav-top"></div>
 
-<div class="container" style="padding-top: 24px; max-width: 700px; padding-bottom: 60px;">
-  <div class="flex-between" style="margin-bottom: 4px;">
-    <h1 id="tituloComercio">Cargando...</h1>
+<div class="container" style="padding-top: 24px; max-width: 980px; padding-bottom: 60px;">
+
+  <div class="insp-eyebrow">Inspección Inicial</div>
+  <div class="insp-nombre" id="nombreComercio">Cargando...</div>
+  <p class="insp-descripcion">Evaluación rápida (2 a 5 min) mirando Google, redes y sitio web del comercio. No reemplaza la Auditoría completa.</p>
+
+  <div class="insp-progress">
+    <div class="insp-progress-track">
+      <div class="insp-progress-fill eleva-gradient" id="relleno"></div>
+    </div>
+    <div class="insp-progress-meta">
+      <span id="textoAvance">0 de 20 respondidas</span>
+      <span class="pct" id="textoPorcentaje">0% completado</span>
+    </div>
   </div>
-  <p class="muted">Evaluación rápida (2 a 5 min) mirando Google, redes y sitio web del comercio. No reemplaza la Auditoría completa.</p>
 
-  <div class="barra-avance"><div class="relleno" id="relleno" style="width:0%"></div></div>
-  <p class="muted" id="textoAvance" style="font-size:12px;">0 de 20 respondidas</p>
+  <div id="mensaje" class="mensaje-error" style="margin-top: 16px;"></div>
 
-  <div id="mensaje" class="mensaje-error"></div>
-
-  <div id="bloques">
+  <div id="bloques" class="bloques-grid">
     <p class="muted">Cargando preguntas...</p>
   </div>
 
-  <div class="flex gap-sm" style="margin-top: 24px;">
+  <div class="flex gap-sm" style="margin-top: 28px;">
     <button type="button" class="btn-primary btn-block" id="btnGenerar">Generar Análisis Inicial</button>
   </div>
 
