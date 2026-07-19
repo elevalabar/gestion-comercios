@@ -1,6 +1,29 @@
 // ─────────────────────────────────────────────
 // AUDITORIA — completar preguntas dinámicamente por área
+//
+// Rediseño de frontend (UX/visual únicamente): la lógica de datos,
+// guardado (autosave por pregunta) y cálculo de score NO cambió —
+// mismos endpoints, mismos payloads, mismos nombres de campo que
+// espera el backend. Lo que cambió es cómo se arma el DOM: en vez de
+// un único template string gigante, cada pieza tiene su propia función
+// (renderHeader/renderArea/renderPregunta) para que sea más fácil de
+// tocar a futuro.
 // ─────────────────────────────────────────────
+
+const ICONOS_AREA = {
+  Google:   '⭐',
+  Web:      '🌐',
+  WhatsApp: '📱',
+  Redes:    '📷',
+  Catalogo: '📖',
+  Branding: '🎨'
+};
+
+// Orden fijo de visualización (mismo criterio que AREAS en Code.gs), para
+// que las áreas siempre aparezcan en el mismo lugar sin importar el orden
+// en que vengan las preguntas desde el backend. Cualquier área que no esté
+// en esta lista igual se muestra, al final.
+const ORDEN_AREAS = ['Google', 'Web', 'WhatsApp', 'Redes', 'Catalogo', 'Branding'];
 
 const params = new URLSearchParams(window.location.search);
 const ID_AUDITORIA = params.get('id');
@@ -16,7 +39,7 @@ document.getElementById('linkVolver').addEventListener('click', (e) => {
 });
 
 if (!ID_AUDITORIA) {
-  document.getElementById('tituloComercio').textContent = 'Auditoría no especificada';
+  document.getElementById('nombreComercio').textContent = 'Auditoría no especificada';
 } else {
   init();
 }
@@ -24,7 +47,7 @@ if (!ID_AUDITORIA) {
 async function init() {
   const auditoria = await apiGet('getAuditoria', { id: ID_AUDITORIA });
   if (!auditoria || auditoria.error) {
-    document.getElementById('tituloComercio').textContent = 'No se encontró la auditoría';
+    document.getElementById('nombreComercio').textContent = 'No se encontró la auditoría';
     return;
   }
 
@@ -37,12 +60,51 @@ async function init() {
   }
 
   const comercio = await apiGet('getComercio', { id: ID_COMERCIO });
-  document.getElementById('tituloComercio').textContent =
-    `Auditoría · ${comercio && comercio.Nombre ? comercio.Nombre : ''}`;
+  renderHeader(comercio);
 
   PREGUNTAS = await apiGet('getPreguntas', { rubro: comercio ? comercio.Rubro : '' });
   pintarPreguntas();
   actualizarAvance();
+}
+
+// ─────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────
+
+function renderHeader(comercio) {
+  document.getElementById('nombreComercio').textContent = comercio && comercio.Nombre ? comercio.Nombre : '';
+  document.getElementById('rubroComercio').textContent = comercio && comercio.Rubro ? comercio.Rubro : '';
+}
+
+function renderPregunta(p) {
+  const id = p['ID Pregunta'];
+  const respuesta = RESPUESTAS[id] || '';
+  return `
+    <div class="pregunta-row" data-pregunta-id="${id}">
+      <span class="pregunta-texto">${p['Texto']}</span>
+      <span class="guardado-check">✔ Guardado</span>
+      <div class="segmented" role="group" aria-label="${p['Texto']}">
+        <button type="button" class="seg-btn seg-si ${respuesta === 'Sí' ? 'activo' : ''}" data-valor="Sí">Sí</button>
+        <button type="button" class="seg-btn seg-no ${respuesta === 'No' ? 'activo' : ''}" data-valor="No">No</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderArea(area, preguntas) {
+  const respondidas = preguntas.filter(p => RESPUESTAS[p['ID Pregunta']] === 'Sí' || RESPUESTAS[p['ID Pregunta']] === 'No').length;
+  return `
+    <div class="card area-card" data-area="${area}">
+      <div class="area-card-header">
+        <span class="area-icon">${ICONOS_AREA[area] || '📋'}</span>
+        <h3>${area}</h3>
+        <span class="area-contador" data-area-contador="${area}">${respondidas}/${preguntas.length}</span>
+      </div>
+      <div class="pregunta-list">
+        ${preguntas.map(renderPregunta).join('')}
+      </div>
+    </div>
+  `;
 }
 
 function pintarPreguntas() {
@@ -53,53 +115,90 @@ function pintarPreguntas() {
     porArea[area].push(p);
   });
 
-  const contenedor = document.getElementById('areas');
-  contenedor.innerHTML = Object.keys(porArea).map(area => `
-    <div class="card area-bloque">
-      <h3>${area}</h3>
-      <div class="pregunta-grid">
-        ${porArea[area].map(p => `
-          <div class="pregunta-fila">
-            <label>${p['Texto']}</label>
-            <select data-pregunta-id="${p['ID Pregunta']}" class="respuesta-select">
-              <option value="">Sin responder</option>
-              <option value="Sí" ${RESPUESTAS[p['ID Pregunta']] === 'Sí' ? 'selected' : ''}>Sí</option>
-              <option value="No" ${RESPUESTAS[p['ID Pregunta']] === 'No' ? 'selected' : ''}>No</option>
-            </select>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `).join('');
+  const areasOrdenadas = [
+    ...ORDEN_AREAS.filter(a => porArea[a]),
+    ...Object.keys(porArea).filter(a => ORDEN_AREAS.indexOf(a) === -1)
+  ];
 
-  document.querySelectorAll('.respuesta-select').forEach(sel => {
-    sel.addEventListener('change', onCambiarRespuesta);
+  const contenedor = document.getElementById('areas');
+  contenedor.innerHTML = areasOrdenadas.map(area => renderArea(area, porArea[area])).join('');
+
+  document.querySelectorAll('.seg-btn').forEach(btn => {
+    btn.addEventListener('click', onCambiarRespuesta);
   });
 }
 
+// ─────────────────────────────────────────────
+// GUARDADO (autosave por pregunta — sin cambios de backend)
+// ─────────────────────────────────────────────
+
 async function onCambiarRespuesta(e) {
-  const preguntaId = e.target.dataset.preguntaId;
-  const respuesta = e.target.value;
+  const boton = e.currentTarget;
+  const fila = boton.closest('.pregunta-row');
+  const preguntaId = fila.dataset.preguntaId;
+  const valorClickeado = boton.dataset.valor;
+
+  // Click sobre el botón ya activo = deshacer la respuesta (vuelve a "sin
+  // responder"), mismo comportamiento que daba la opción "Sin responder"
+  // del <select> original — sin agregar un tercer botón visible.
+  const respuesta = RESPUESTAS[preguntaId] === valorClickeado ? '' : valorClickeado;
   RESPUESTAS[preguntaId] = respuesta;
+
+  pintarEstadoPregunta(fila, respuesta);
   actualizarAvance();
 
-  e.target.disabled = true;
+  const botonesFila = fila.querySelectorAll('.seg-btn');
+  botonesFila.forEach(b => b.disabled = true);
+
   try {
     await apiPost('guardarRespuesta', { idAuditoria: ID_AUDITORIA, idPregunta: preguntaId, respuesta });
+    mostrarGuardado(fila);
   } catch (err) {
     // el guardado falló pero dejamos el valor elegido en pantalla;
-    // el usuario puede reintentar cambiando el select de nuevo
+    // el usuario puede reintentar clickeando de nuevo
   } finally {
-    e.target.disabled = false;
+    botonesFila.forEach(b => b.disabled = false);
   }
 }
+
+function pintarEstadoPregunta(fila, respuesta) {
+  fila.querySelector('.seg-si').classList.toggle('activo', respuesta === 'Sí');
+  fila.querySelector('.seg-no').classList.toggle('activo', respuesta === 'No');
+}
+
+function mostrarGuardado(fila) {
+  const check = fila.querySelector('.guardado-check');
+  check.classList.add('visible');
+  clearTimeout(check._timeoutId);
+  check._timeoutId = setTimeout(() => check.classList.remove('visible'), 1000);
+}
+
+// ─────────────────────────────────────────────
+// PROGRESO
+// ─────────────────────────────────────────────
 
 function actualizarAvance() {
   const total = PREGUNTAS.length;
   const respondidas = PREGUNTAS.filter(p => RESPUESTAS[p['ID Pregunta']] === 'Sí' || RESPUESTAS[p['ID Pregunta']] === 'No').length;
   const pct = total > 0 ? Math.round((respondidas / total) * 100) : 0;
+
   document.getElementById('relleno').style.width = pct + '%';
-  document.getElementById('textoAvance').textContent = `${respondidas} de ${total} respondidas`;
+  document.getElementById('textoAvance').textContent = `${respondidas} de ${total} respuestas`;
+  document.getElementById('textoPorcentaje').textContent = `${pct}% completado`;
+
+  // Contador por área (header de cada card)
+  const porArea = {};
+  PREGUNTAS.forEach(p => {
+    const area = p['Area'];
+    if (!porArea[area]) porArea[area] = [];
+    porArea[area].push(p);
+  });
+  Object.keys(porArea).forEach(area => {
+    const el = document.querySelector(`[data-area-contador="${area}"]`);
+    if (!el) return;
+    const resp = porArea[area].filter(p => RESPUESTAS[p['ID Pregunta']] === 'Sí' || RESPUESTAS[p['ID Pregunta']] === 'No').length;
+    el.textContent = `${resp}/${porArea[area].length}`;
+  });
 }
 
 document.getElementById('btnFinalizar').addEventListener('click', async () => {
