@@ -16,7 +16,8 @@ const ICONS = {
   web: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
   maps: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
   instagram: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37a4 4 0 1 1-7.914 1.174A4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>',
-  puntos: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>'
+  puntos: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>',
+  facebook: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12z"/></svg>'
 };
 
 // ── Helpers de presentación ─────────────────────────────────────
@@ -56,23 +57,18 @@ function extraerLocalidad(direccion) {
   return candidato;
 }
 
-// Nivel de completitud: cuenta cuántos de los 13 campos de
-// diagnóstico rápido (los mismos que ya llegan en getComercios) están
-// cargados. Reemplaza temporalmente al Eleva Score: mismo lugar y
-// mismo layout en la tarjeta, listo para swapear por el score real
-// el día que exista ese backend.
-const CAMPOS_COMPLETITUD = [
-  'Tiene sitio web', 'Tiene catálogo', 'Tiene WhatsApp', 'Tiene Google Maps',
-  'Fotos propias', 'Fotos bien iluminadas', 'Fotos recientes', 'Mismo logo/colores',
-  'Nombre/rubro claro en bio', 'CTA claro', 'Botón WhatsApp visible',
-  'Horarios publicados', 'Última publicación en redes'
-];
+// "Completo": cuenta cuántos de los 6 canales de contacto (los mismos
+// que se muestran como chips arriba) están cargados para ese comercio.
+// Antes usaba el checklist de 13 campos de diagnóstico (Tiene sitio
+// web, Fotos propias, CTA claro, etc.), pero ese checklist todavía no
+// se cargó para ningún comercio — da 0/13 siempre y no refleja lo que
+// el usuario ya completó. Este indicador reemplaza temporalmente al
+// Eleva Score: mismo lugar y mismo layout en la tarjeta, listo para
+// swapear por el score real el día que exista ese backend.
+const CAMPOS_COMPLETITUD = ['Teléfono', 'WhatsApp', 'Sitio web', 'Google Maps', 'Instagram', 'Facebook'];
 
 function calcularCompletitud(c) {
-  const completados = CAMPOS_COMPLETITUD.filter(campo => {
-    const valor = c[campo];
-    return valor === true || valor === 'Sí' || valor === 'Si' || valor === 'SI';
-  }).length;
+  const completados = CAMPOS_COMPLETITUD.filter(campo => !!c[campo]).length;
   return { completados, total: CAMPOS_COMPLETITUD.length };
 }
 
@@ -90,15 +86,16 @@ function renderTarjetaComercio(c) {
   const porcentaje = Math.round((completados / total) * 100);
 
   const canales = [
-    { activo: !!c['Teléfono'],    icono: ICONS.telefono,  titulo: 'Teléfono' },
-    { activo: !!c['WhatsApp'],    icono: ICONS.whatsapp,  titulo: 'WhatsApp' },
-    { activo: !!c['Sitio web'],   icono: ICONS.web,       titulo: 'Sitio web' },
-    { activo: !!c['Google Maps'], icono: ICONS.maps,      titulo: 'Google Maps' },
-    { activo: !!c['Instagram'],   icono: ICONS.instagram, titulo: 'Instagram' }
+    { clave: 'telefono',  activo: !!c['Teléfono'],    icono: ICONS.telefono,  titulo: 'Teléfono' },
+    { clave: 'whatsapp',  activo: !!c['WhatsApp'],    icono: ICONS.whatsapp,  titulo: 'WhatsApp' },
+    { clave: 'web',       activo: !!c['Sitio web'],   icono: ICONS.web,       titulo: 'Sitio web' },
+    { clave: 'maps',      activo: !!c['Google Maps'], icono: ICONS.maps,      titulo: 'Google Maps' },
+    { clave: 'instagram', activo: !!c['Instagram'],   icono: ICONS.instagram, titulo: 'Instagram' },
+    { clave: 'facebook',  activo: !!c['Facebook'],    icono: ICONS.facebook,  titulo: 'Facebook' }
   ];
 
   const canalesHtml = canales.map(ch => `
-    <div class="tc-canal ${ch.activo ? 'tc-canal-activo' : 'tc-canal-inactivo'}" title="${ch.activo ? ch.titulo : 'Sin ' + ch.titulo.toLowerCase()}">
+    <div class="tc-canal tc-canal-${ch.clave} ${ch.activo ? 'tc-canal-activo' : 'tc-canal-inactivo'}" title="${ch.activo ? ch.titulo : 'Sin ' + ch.titulo.toLowerCase()}">
       ${ch.icono}
     </div>
   `).join('');
@@ -130,7 +127,7 @@ function renderTarjetaComercio(c) {
 
       <div class="tc-completitud">
         <div class="tc-completitud-fila">
-          <span>Nivel de completitud</span>
+          <span>Completo</span>
           <span>${completados}/${total}</span>
         </div>
         <div class="tc-barra">
