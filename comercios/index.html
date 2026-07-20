@@ -14,24 +14,129 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="icon" type="image/png" href="../assets/img/logo.png">
 <style>
-  .buscador { margin: 20px 0 16px; }
-  .fila-comercio {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 12px 0; border-bottom: 1px solid var(--border);
-    text-decoration: none; color: inherit;
+  /* ── Cabecera de métricas rápidas ──────────────────────────── */
+  .stats-header {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 24px 0;
   }
-  .fila-comercio:hover { opacity: 0.8; text-decoration: none; }
-  .fila-comercio:last-child { border-bottom: none; }
-  .fila-comercio p.nombre { font-size: 14px; color: var(--text-primary); }
-  .fila-comercio p.detalle { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-  .fila-comercio .der { display: flex; align-items: center; gap: 10px; }
+  .stat-card {
+    background: var(--bg-card-alt);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .stat-card p.stat-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+  .stat-card p.stat-valor { font-size: 24px; font-weight: 500; color: var(--text-primary); }
 
-  .btn-eliminar {
-    background: none; border: none; color: var(--text-secondary);
-    font-size: 15px; line-height: 1; padding: 4px 6px; cursor: pointer;
-    border-radius: 4px;
+  /* ── Barra de filtros ──────────────────────────────────────── */
+  .filtros-barra {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
   }
-  .btn-eliminar:hover { color: #d9534f; background: rgba(217,83,79,0.1); }
+  .filtros-barra input[type="text"] { flex: 2; min-width: 200px; }
+  .filtros-barra select { flex: 1; min-width: 130px; }
+
+  /* ── Grid de tarjetas ──────────────────────────────────────── */
+  .grid-comercios {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .grid-comercios p.muted { grid-column: 1 / -1; }
+
+  .tarjeta-comercio {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  }
+  .tarjeta-comercio:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .tc-cabecera { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .tc-nombre { font-size: 18px; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+  .tc-rubro { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
+
+  .tc-badge-servicio { display: flex; align-items: center; gap: 6px; flex-shrink: 0; white-space: nowrap; }
+  .tc-punto { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .tc-punto-ok      { background: var(--success); }
+  .tc-punto-alerta  { background: var(--warning); }
+  .tc-punto-alto    { background: var(--danger); }
+  .tc-punto-neutro  { background: var(--text-muted); }
+  .tc-badge-servicio span.tc-label-servicio { font-size: 12px; color: var(--text-secondary); }
+
+  .tc-localidad {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--text-secondary);
+    margin-top: 18px;
+  }
+  .tc-localidad svg { flex-shrink: 0; }
+
+  .tc-canales { display: flex; gap: 8px; margin-top: 18px; }
+  .tc-canal {
+    width: 30px; height: 30px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .tc-canal-activo   { background: var(--accent-soft); color: var(--accent); }
+  .tc-canal-inactivo { background: var(--bg-card-alt); color: var(--text-muted); }
+
+  .tc-completitud { margin-top: 22px; }
+  .tc-completitud-fila { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .tc-completitud-fila span { font-size: 12px; color: var(--text-secondary); }
+  .tc-barra { height: 4px; background: var(--bg-card-alt); border-radius: 4px; overflow: hidden; }
+  .tc-barra-relleno { height: 100%; background: var(--accent); border-radius: 4px; }
+
+  .tc-pie { display: flex; align-items: center; justify-content: space-between; margin-top: 22px; }
+  .tc-acciones-der { display: flex; align-items: center; gap: 8px; }
+
+  .btn-principal {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+    font-size: 13px; padding: 8px 16px;
+  }
+  .btn-icono {
+    width: 32px; height: 32px; padding: 0;
+    background: transparent; border-color: var(--border);
+  }
+
+  .tc-menu-wrap { position: relative; }
+  .tc-menu-lista {
+    display: none;
+    position: absolute; right: 0; bottom: calc(100% + 6px);
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 6px;
+    min-width: 150px; z-index: 5;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  }
+  .tc-menu-lista.abierto { display: block; }
+  .tc-menu-item {
+    display: block; width: 100%; text-align: left;
+    background: none; border: none; border-radius: 6px;
+    padding: 8px 10px; font-size: 13px; color: var(--text-primary);
+    cursor: pointer;
+  }
+  .tc-menu-item:hover { background: var(--bg-card-alt); opacity: 1; }
+  .tc-menu-item.peligro { color: var(--danger); }
+  .tc-menu-item[disabled] { opacity: 0.45; cursor: not-allowed; }
+  .tc-menu-item[disabled]:hover { background: none; }
+
+  @media (max-width: 640px) {
+    .stats-header { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 480px) {
+    .grid-comercios { grid-template-columns: 1fr; }
+    .tarjeta-comercio { padding: 20px; }
+    .filtros-barra select { flex: 1 1 100%; }
+  }
 </style>
 </head>
 <body>
@@ -45,14 +150,56 @@
   </div>
   <p class="muted">Todos los comercios relevados hasta ahora.</p>
 
-  <div class="buscador">
-    <input type="text" id="buscador" placeholder="Buscar por nombre o rubro...">
+  <div class="stats-header">
+    <div class="stat-card">
+      <p class="stat-label">Total comercios</p>
+      <p class="stat-valor" id="statTotal">—</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-label">Clientes activos</p>
+      <p class="stat-valor" id="statActivos">—</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-label">Prioridad alta</p>
+      <p class="stat-valor" id="statPrioridad">—</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-label">Sin contactar</p>
+      <p class="stat-valor" id="statNuevos">—</p>
+    </div>
   </div>
 
-  <div class="card">
-    <div id="listaComercios">
-      <p class="muted">Cargando...</p>
-    </div>
+  <div class="filtros-barra">
+    <input type="text" id="buscador" placeholder="Buscar por nombre o rubro...">
+    <select id="filtroEstado">
+      <option value="">Estado</option>
+      <option value="Nuevo">Nuevo</option>
+      <option value="Contactado">Contactado</option>
+      <option value="En seguimiento">En seguimiento</option>
+      <option value="Cliente">Cliente</option>
+    </select>
+    <select id="filtroPrioridad">
+      <option value="">Prioridad</option>
+      <option value="Alta">Alta</option>
+      <option value="Media">Media</option>
+      <option value="Baja">Baja</option>
+    </select>
+    <select id="filtroRubro">
+      <option value="">Rubro</option>
+    </select>
+    <select id="filtroLocalidad">
+      <option value="">Localidad</option>
+    </select>
+    <select id="filtroOrden">
+      <option value="">Ordenar por</option>
+      <option value="recientes">Más recientes</option>
+      <option value="nombre">Nombre (A-Z)</option>
+      <option value="prioridad">Prioridad</option>
+    </select>
+  </div>
+
+  <div id="listaComercios" class="grid-comercios">
+    <p class="muted">Cargando...</p>
   </div>
 </div>
 
