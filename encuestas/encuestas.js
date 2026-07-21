@@ -84,7 +84,8 @@ function renderFila(e) {
     const numero = String(e.whatsapp).replace(/[^\d]/g, '');
     contactoHtml = `<a href="https://wa.me/${numero}" target="_blank" class="icono-contacto" title="WhatsApp: ${escapeHtml(e.whatsapp)}" onclick="event.stopPropagation()">💬</a>`;
   } else if (e.email) {
-    contactoHtml = `<a href="mailto:${escapeHtml(e.email)}" class="icono-contacto" title="${escapeHtml(e.email)}" onclick="event.stopPropagation()">✉️</a>`;
+    const emailEscapado = escapeHtml(e.email).replace(/'/g, '&#39;');
+    contactoHtml = `<button type="button" class="icono-contacto" title="Copiar email: ${emailEscapado}" onclick="event.stopPropagation(); copiarContactoAlPortapapeles(this, '${emailEscapado}')">✉️</button>`;
   }
 
   return `
@@ -230,6 +231,20 @@ document.getElementById('btnCerrarDrawer').addEventListener('click', cerrarDrawe
 document.getElementById('drawerFondo').addEventListener('click', (e) => {
   if (e.target.id === 'drawerFondo') cerrarDrawer();
 });
+
+// ── Copiar email al portapapeles desde el ícono de contacto ────────
+
+async function copiarContactoAlPortapapeles(btn, texto) {
+  const original = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(texto);
+    btn.textContent = '✔';
+  } catch (err) {
+    alert('No se pudo copiar. Probá de nuevo.');
+    return;
+  }
+  setTimeout(() => { btn.textContent = original; }, 1200);
+}
 
 // ── Copiar contexto para IA (siempre generado al momento) ─────────
 
