@@ -9,15 +9,29 @@ function badgeClase(prioridad) {
 }
 
 async function cargarPanel() {
-  const res = await apiGet('getComercios');
+  // Reutilizar datos si ya están en sessionStorage (cargados por comercios.js)
+  let comercios = [];
+  const cache = sessionStorage.getItem('eleva_comercios_cache');
+  const cacheTime = sessionStorage.getItem('eleva_comercios_cache_time');
+  const CACHE_TTL = 2 * 60 * 1000; // 2 minutos
 
-  if (!res.ok && res.error) {
-    document.getElementById('listaRecientes').innerHTML =
-      `<p class="muted">No se pudo cargar la información (${res.error}).</p>`;
-    return;
+  if (cache && cacheTime && (Date.now() - Number(cacheTime)) < CACHE_TTL) {
+    try {
+      comercios = JSON.parse(cache);
+    } catch (e) { /* falla silencioso, sigue a fetch */ }
   }
 
-  const comercios = Array.isArray(res) ? res : [];
+  if (comercios.length === 0) {
+    const res = await apiGet('getComercios');
+    if (!res.ok && res.error) {
+      document.getElementById('listaRecientes').innerHTML =
+        `<p class="muted">No se pudo cargar la información (${res.error}).</p>`;
+      return;
+    }
+    comercios = Array.isArray(res) ? res : [];
+    sessionStorage.setItem('eleva_comercios_cache', JSON.stringify(comercios));
+    sessionStorage.setItem('eleva_comercios_cache_time', String(Date.now()));
+  }
 
   const total = comercios.length;
   const enSeguimiento = comercios.filter(c => c.Estado === 'En seguimiento' || c.Estado === 'Contactado').length;
@@ -41,7 +55,7 @@ async function cargarPanel() {
   }
 
   contenedor.innerHTML = recientes.map(c => `
-    <div class="fila-comercio">
+    <div class="fila-comercio" style="cursor: pointer;" onclick="window.location.href='../comercios/ficha.html?id=${encodeURIComponent(c.ID)}'">
       <div>
         <p class="nombre">${c.Nombre || 'Sin nombre'}</p>
         <p class="detalle">${c.Rubro || ''}</p>
