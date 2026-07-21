@@ -76,21 +76,30 @@ function renderFila(e) {
     `<option value="${est}" ${e.estado === est ? 'selected' : ''}>${est}</option>`
   ).join('');
 
+  const negocio = e.nombre || e.empresa || '—';
+  const negocioTitulo = [e.nombre, e.empresa].filter(Boolean).join(' · ') || 'Sin datos de contacto';
+
+  let contactoHtml = '<span class="celda-muted">—</span>';
+  if (e.whatsapp) {
+    const numero = String(e.whatsapp).replace(/[^\d]/g, '');
+    contactoHtml = `<a href="https://wa.me/${numero}" target="_blank" class="icono-contacto" title="WhatsApp: ${escapeHtml(e.whatsapp)}" onclick="event.stopPropagation()">💬</a>`;
+  } else if (e.email) {
+    contactoHtml = `<a href="mailto:${escapeHtml(e.email)}" class="icono-contacto" title="${escapeHtml(e.email)}" onclick="event.stopPropagation()">✉️</a>`;
+  }
+
   return `
     <tr data-id="${escapeHtml(e.id)}">
-      <td class="celda-muted">${formatearFecha(e.fecha)}</td>
-      <td class="celda-empresa">${escapeHtml(e.nombre) || '—'}</td>
-      <td>${escapeHtml(e.empresa) || '—'}</td>
-      <td class="celda-muted">${escapeHtml(e.whatsapp || e.email) || '—'}</td>
-      <td class="celda-muted">${escapeHtml(e.provincia) || '—'}</td>
-      <td class="celda-muted">${escapeHtml(e.rubro) || '—'}</td>
+      <td class="celda-muted" title="${formatearFecha(e.fecha)}">${formatearFecha(e.fecha)}</td>
+      <td class="celda-empresa" title="${escapeHtml(negocioTitulo)}">${escapeHtml(negocio)}</td>
+      <td class="celda-contacto">${contactoHtml}</td>
+      <td class="celda-muted" title="${escapeHtml(e.provincia)}">${escapeHtml(e.provincia) || '—'}</td>
+      <td class="celda-muted" title="${escapeHtml(e.rubro)}">${escapeHtml(e.rubro) || '—'}</td>
       <td>${diagnosticoHtml}</td>
       <td>
-        <select class="select-estado" data-id="${escapeHtml(e.id)}">
+        <select class="select-estado" data-id="${escapeHtml(e.id)}" onclick="event.stopPropagation()">
           ${opcionesEstado}
         </select>
       </td>
-      <td><button type="button" class="btn btn-icono btn-ver-detalle" data-id="${escapeHtml(e.id)}" title="Ver detalle">→</button></td>
     </tr>
   `;
 }
@@ -99,7 +108,7 @@ function pintarTabla(lista) {
   const cuerpo = document.getElementById('cuerpoTabla');
 
   if (lista.length === 0) {
-    cuerpo.innerHTML = '<tr><td colspan="9" class="muted">No se encontraron encuestas.</td></tr>';
+    cuerpo.innerHTML = '<tr><td colspan="7" class="muted">No se encontraron encuestas.</td></tr>';
     return;
   }
 
@@ -108,13 +117,10 @@ function pintarTabla(lista) {
   document.querySelectorAll('.select-estado').forEach(sel => {
     sel.addEventListener('change', onCambiarEstado);
   });
-  document.querySelectorAll('.btn-ver-detalle').forEach(btn => {
-    btn.addEventListener('click', () => abrirDrawer(btn.dataset.id));
-  });
   document.querySelectorAll('.tabla-encuestas tbody tr').forEach(tr => {
     tr.style.cursor = 'pointer';
     tr.addEventListener('click', (e) => {
-      if (e.target.closest('select') || e.target.closest('button')) return;
+      if (e.target.closest('select') || e.target.closest('a')) return;
       abrirDrawer(tr.dataset.id);
     });
   });
@@ -285,7 +291,7 @@ async function cargarEncuestas() {
     const res = await apiGet('listarEncuestas');
     if (!res.ok && res.error) {
       document.getElementById('cuerpoTabla').innerHTML =
-        `<tr><td colspan="9" class="muted">No se pudo cargar la información (${escapeHtml(res.error)}).</td></tr>`;
+        `<tr><td colspan="7" class="muted">No se pudo cargar la información (${escapeHtml(res.error)}).</td></tr>`;
       return;
     }
     TODAS_LAS_ENCUESTAS = Array.isArray(res) ? res : (res.datos || []);
@@ -294,7 +300,7 @@ async function cargarEncuestas() {
     pintarTabla(TODAS_LAS_ENCUESTAS);
   } catch (err) {
     document.getElementById('cuerpoTabla').innerHTML =
-      '<tr><td colspan="9" class="muted">No se pudo conectar con el servidor.</td></tr>';
+      '<tr><td colspan="7" class="muted">No se pudo conectar con el servidor.</td></tr>';
   }
 }
 
