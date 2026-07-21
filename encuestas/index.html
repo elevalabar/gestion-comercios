@@ -31,23 +31,42 @@
   .filtros-barra select { flex: 1; min-width: 130px; }
 
   /* ── Tabla ───────────────────────────────────────────────── */
-  .tabla-wrap { overflow-x: auto; }
-  table.tabla-encuestas { width: 100%; border-collapse: collapse; font-size: 13px; }
+  /* table-layout fijo + ellipsis en vez de scroll horizontal: cada
+     columna tiene un ancho definido y el contenido largo se corta con
+     "..." (el título completo queda disponible al pasar el mouse). */
+  table.tabla-encuestas { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
+  .tabla-encuestas col.col-fecha     { width: 9%; }
+  .tabla-encuestas col.col-negocio   { width: 18%; }
+  .tabla-encuestas col.col-contacto  { width: 8%; }
+  .tabla-encuestas col.col-provincia { width: 14%; }
+  .tabla-encuestas col.col-rubro     { width: 20%; }
+  .tabla-encuestas col.col-diag      { width: 16%; }
+  .tabla-encuestas col.col-estado    { width: 15%; }
+
   .tabla-encuestas th {
     text-align: left; padding: 10px 12px; color: var(--text-secondary);
-    font-weight: 500; border-bottom: 1px solid var(--border); white-space: nowrap;
+    font-weight: 500; border-bottom: 1px solid var(--border);
   }
   .tabla-encuestas td {
     padding: 12px; border-bottom: 1px solid var(--border);
-    color: var(--text-primary); vertical-align: middle; white-space: nowrap;
+    color: var(--text-primary); vertical-align: middle;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .tabla-encuestas tr:last-child td { border-bottom: none; }
   .tabla-encuestas tr:hover { background: var(--bg-card-alt); }
   .celda-empresa { font-weight: 500; }
   .celda-muted { color: var(--text-secondary); }
 
+  .celda-contacto { text-align: center; }
+  .icono-contacto {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%; background: var(--bg-card-alt);
+    text-decoration: none; font-size: 13px;
+  }
+  .icono-contacto:hover { background: var(--accent-soft); }
+
   select.select-estado {
-    font-size: 12px; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border);
+    width: 100%; font-size: 12px; padding: 5px 6px; border-radius: 8px; border: 1px solid var(--border);
     background: var(--bg-card-alt); color: var(--text-primary);
   }
   .badge-urgencia-alta  { background: var(--danger-soft);  color: var(--danger); }
@@ -137,21 +156,28 @@
   <div class="card">
     <div class="tabla-wrap">
       <table class="tabla-encuestas">
+        <colgroup>
+          <col class="col-fecha">
+          <col class="col-negocio">
+          <col class="col-contacto">
+          <col class="col-provincia">
+          <col class="col-rubro">
+          <col class="col-diag">
+          <col class="col-estado">
+        </colgroup>
         <thead>
           <tr>
             <th>Fecha</th>
-            <th>Nombre</th>
-            <th>Empresa</th>
-            <th>Contacto</th>
+            <th>Negocio</th>
+            <th class="celda-contacto">Contacto</th>
             <th>Provincia</th>
             <th>Rubro</th>
             <th>Diagnóstico</th>
             <th>Estado</th>
-            <th></th>
           </tr>
         </thead>
         <tbody id="cuerpoTabla">
-          <tr><td colspan="9" class="muted">Cargando...</td></tr>
+          <tr><td colspan="7" class="muted">Cargando...</td></tr>
         </tbody>
       </table>
     </div>
