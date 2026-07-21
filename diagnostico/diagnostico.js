@@ -4,6 +4,11 @@
 // (que lee DiagPreguntas/DiagOpciones). Este archivo solo sabe
 // renderizar tipos genéricos (unica/multiple/escala/abierta) y
 // validar/enviar. Agregar una pregunta nueva no toca este código.
+//
+// Rediseño visual (sidebar + cards): solo cambia CÓMO se pinta el
+// wizard. La lógica de datos/validación/envío es la misma de antes
+// función por función (compilarRespuestas, validarBloqueActual,
+// enviarDiagnostico, etc. sin tocar).
 // ─────────────────────────────────────────────
 
 const TIEMPO_CARGA_FORM = Date.now();
@@ -12,6 +17,14 @@ let CONFIG = null;
 let BLOQUE_ACTUAL = 0;
 // respuestas[idPregunta] = { tipo, idOpciones: [], valorTexto: '', textoOtro: '' }
 let RESPUESTAS = {};
+
+// Paleta cíclica para el ícono de cada card de pregunta, asignada por
+// bloque (todas las preguntas de un mismo bloque comparten color) —
+// mismo criterio que el color por área ya usado en Auditoría/Inspección,
+// pero acá no hay iconografía por tema porque el catálogo no trae ese
+// dato: se cicla un color por posición de bloque, así funciona con
+// cualquier catálogo sin tocar código si se agregan bloques nuevos.
+const PALETA_BLOQUES = ['#4b8ef0', '#8b6ef0', '#1d9e75', '#e39a6b', '#e06b9b', '#3fb8c9'];
 
 document.getElementById('btnEmpezar').addEventListener('click', empezar);
 document.getElementById('btnAnterior').addEventListener('click', () => cambiarBloque(-1));
@@ -34,6 +47,7 @@ async function empezar() {
 
   document.getElementById('cargando').classList.add('oculto');
   document.getElementById('wizard').classList.remove('oculto');
+  renderSidebarBloques();
   renderBloque();
 }
 
@@ -57,23 +71,41 @@ function condicionSatisfecha(pregunta) {
   return !!(padre && padre.idOpciones.indexOf(pregunta.condicionalValorOpcion) !== -1);
 }
 
+// ---------- Sidebar / progreso (solo visual, no persiste) ----------
+
+function renderSidebarBloques() {
+  const nav = document.getElementById('sidebarBloques');
+  nav.innerHTML = CONFIG.bloques.map((bloque, i) => {
+    const estado = i < BLOQUE_ACTUAL ? 'completado' : i === BLOQUE_ACTUAL ? 'actual' : 'pendiente';
+    const marca = estado === 'completado' ? '✔' : (i + 1);
+    return `<div class="item-bloque ${estado}"><span class="marca">${marca}</span><span>${bloque.nombre}</span></div>`;
+  }).join('');
+}
+
+function actualizarProgreso() {
+  const total = CONFIG.bloques.length;
+  const pct = Math.round(((BLOQUE_ACTUAL + 1) / total) * 100);
+  document.getElementById('relleno').style.width = pct + '%';
+  document.getElementById('rellenoMobile').style.width = pct + '%';
+  document.getElementById('progresoTexto').textContent = `${pct}% completado`;
+}
+
 // ---------- Render ----------
 
 function renderBloque() {
   const bloque = CONFIG.bloques[BLOQUE_ACTUAL];
   const totalBloques = CONFIG.bloques.length;
 
-  document.getElementById('relleno').style.width = Math.round(((BLOQUE_ACTUAL + 1) / totalBloques) * 100) + '%';
-  document.getElementById('textoAvance').textContent = `Bloque ${BLOQUE_ACTUAL + 1} de ${totalBloques} — ${bloque.nombre}`;
+  actualizarProgreso();
+  renderSidebarBloques();
+  document.getElementById('tituloBloque').textContent = bloque.nombre;
   document.getElementById('mensaje').classList.remove('visible');
 
+  const colorBloque = PALETA_BLOQUES[BLOQUE_ACTUAL % PALETA_BLOQUES.length];
   const preguntasVisibles = bloque.preguntas.filter(condicionSatisfecha);
 
-  const html = `
-    <h2 class="bloque-titulo">${bloque.nombre}</h2>
-    ${preguntasVisibles.map(renderPregunta).join('')}
-  `;
-  document.getElementById('contenidoBloque').innerHTML = html;
+  document.getElementById('contenidoBloque').innerHTML =
+    preguntasVisibles.map(p => renderPregunta(p, colorBloque)).join('');
 
   attachEventos(preguntasVisibles);
 
@@ -82,24 +114,34 @@ function renderBloque() {
     BLOQUE_ACTUAL === totalBloques - 1 ? 'Enviar diagnóstico ✓' : 'Siguiente →';
 }
 
-function renderPregunta(p) {
+function iconoCard(color) {
+  return `<span class="pregunta-icono" style="background:${color}">?</span>`;
+}
+
+function renderPregunta(p, colorBloque) {
   const r = getRespuesta(p.id);
 
   if (p.tipo === 'abierta') {
     return `
-      <div class="pregunta" data-pregunta="${p.id}">
-        <p class="pregunta-texto">${p.texto}</p>
+      <div class="pregunta-card" data-pregunta="${p.id}">
+        <div class="pregunta-card-cabecera">
+          ${iconoCard(colorBloque)}
+          <p class="pregunta-texto">${p.texto}</p>
+        </div>
         <input type="text" data-input-texto="${p.id}" value="${escapeAttr(r.valorTexto)}" placeholder="Escribí acá...">
       </div>`;
   }
 
   if (p.tipo === 'escala') {
     return `
-      <div class="pregunta" data-pregunta="${p.id}">
-        <p class="pregunta-texto">${p.texto}</p>
-        <div class="opciones escala-opciones">
+      <div class="pregunta-card" data-pregunta="${p.id}">
+        <div class="pregunta-card-cabecera">
+          ${iconoCard(colorBloque)}
+          <p class="pregunta-texto">${p.texto}</p>
+        </div>
+        <div class="opciones-cards escala-opciones">
           ${[1, 2, 3, 4, 5].map(n => `
-            <button type="button" class="opcion-btn ${r.valorTexto === String(n) ? 'seleccionada' : ''}"
+            <button type="button" class="opcion-card ${r.valorTexto === String(n) ? 'seleccionada' : ''}"
               data-escala="${p.id}" data-valor="${n}">${n}</button>
           `).join('')}
         </div>
@@ -108,16 +150,19 @@ function renderPregunta(p) {
 
   // unica / multiple
   const maxSel = p.maxSelecciones ? Number(p.maxSelecciones) : null;
-  const contador = p.tipo === 'multiple' && maxSel ? `<span class="pregunta-contador"> (elegí hasta ${maxSel} — ${r.idOpciones.length}/${maxSel})</span>` : '';
+  const contador = p.tipo === 'multiple' && maxSel ? `<span class="pregunta-contador">Elegí hasta ${maxSel} — ${r.idOpciones.length}/${maxSel}</span>` : '';
   const limiteAlcanzado = p.tipo === 'multiple' && maxSel && r.idOpciones.length >= maxSel;
 
   const opcionesHtml = p.opciones.map(o => {
     const seleccionada = r.idOpciones.indexOf(o.id) !== -1;
     const deshabilitada = p.tipo === 'multiple' && limiteAlcanzado && !seleccionada;
     return `
-      <button type="button" class="opcion-btn ${seleccionada ? 'seleccionada' : ''}"
+      <button type="button" class="opcion-card ${seleccionada ? 'seleccionada' : ''}"
         data-opcion="${p.id}" data-opcion-id="${o.id}" data-es-otro="${o.esOtro ? '1' : '0'}"
-        ${deshabilitada ? 'disabled' : ''}>${o.texto}</button>`;
+        ${deshabilitada ? 'disabled' : ''}>
+        <span class="check">${seleccionada ? '✓' : ''}</span>
+        <span>${o.texto}</span>
+      </button>`;
   }).join('');
 
   const otroSeleccionado = p.opciones.some(o => o.esOtro && r.idOpciones.indexOf(o.id) !== -1);
@@ -127,9 +172,12 @@ function renderPregunta(p) {
     </div>` : '';
 
   return `
-    <div class="pregunta" data-pregunta="${p.id}">
-      <p class="pregunta-texto">${p.texto}${contador}</p>
-      <div class="opciones">${opcionesHtml}</div>
+    <div class="pregunta-card" data-pregunta="${p.id}">
+      <div class="pregunta-card-cabecera">
+        ${iconoCard(colorBloque)}
+        <p class="pregunta-texto">${p.texto}${contador}</p>
+      </div>
+      <div class="opciones-cards tipo-${p.tipo}">${opcionesHtml}</div>
       ${otroHtml}
     </div>`;
 }
