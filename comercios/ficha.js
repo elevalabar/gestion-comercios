@@ -59,7 +59,6 @@ async function cargarTodo() {
   const auds = datos.auditorias;
   const insps = datos.inspecciones;
   const imgs = datos.imagenes;
-  const archivos = datos.archivos;
 
   comercioActual = c;
   auditoriasActuales = Array.isArray(auds) ? auds : [];
@@ -74,9 +73,9 @@ async function cargarTodo() {
   pintarInspeccionesTab(inspeccionesActuales);
   await pintarResumen(c, auditoriasActuales, inspeccionesActuales);
 
+  pintarImagenes(Array.isArray(imgs) ? imgs : []);
   IMAGENES_ACTUALES = Array.isArray(imgs) ? imgs : [];
-  pintarImagenes(IMAGENES_ACTUALES);
-  pintarArchivos(Array.isArray(archivos) ? archivos : []);
+  cargarArchivos();
 }
 
 // ─────────────────────────────────────────────
@@ -390,6 +389,12 @@ document.getElementById('formFicha').addEventListener('submit', async (e) => {
 
 let IMAGENES_ACTUALES = [];
 
+async function cargarImagenes() {
+  const imgs = await apiGet('getImagenes', { idComercio: ID_COMERCIO });
+  IMAGENES_ACTUALES = Array.isArray(imgs) ? imgs : [];
+  pintarImagenes(IMAGENES_ACTUALES);
+}
+
 function pintarImagenes(imgs) {
   const grid = document.getElementById('fotosGridVista');
 
@@ -443,10 +448,7 @@ function pintarImagenes(imgs) {
         alert((res && res.error) || 'No se pudo eliminar la foto.');
         return;
       }
-      // Recargar imágenes desde el backend para reflejar el cambio
-      const imgsNuevas = await apiGet('getImagenes', { idComercio: ID_COMERCIO });
-      IMAGENES_ACTUALES = Array.isArray(imgsNuevas) ? imgsNuevas : [];
-      pintarImagenes(IMAGENES_ACTUALES);
+      cargarImagenes();
     });
   });
 }
@@ -499,10 +501,7 @@ document.getElementById('btnSubirFoto').addEventListener('click', async () => {
       btnSubir.classList.add('oculto');
       btnSubir.disabled = false;
       estado.textContent = '';
-      // Recargar imágenes desde el backend
-      const imgsNuevas = await apiGet('getImagenes', { idComercio: ID_COMERCIO });
-      IMAGENES_ACTUALES = Array.isArray(imgsNuevas) ? imgsNuevas : [];
-      pintarImagenes(IMAGENES_ACTUALES);
+      cargarImagenes();
     } catch (err) {
       estado.textContent = 'No se pudo conectar con el servidor. Probá de nuevo.';
       btnSubir.disabled = false;
@@ -634,17 +633,42 @@ function pintarInspeccionesTab(lista) {
     const href = i.estado === 'Finalizada'
       ? `../inspeccion/resultado.html?id=${encodeURIComponent(i.id)}`
       : `../inspeccion/index.html?id=${encodeURIComponent(i.id)}`;
+    const puedeEliminar = i.estado !== 'Finalizada';
     return `
-      <a href="${href}" class="fila-auditoria">
-        <div>
-          <p>${formatFecha(i.fecha)}</p>
-        </div>
-        <div class="der">
-          ${i.estado === 'Finalizada' ? `<span class="muted">${i.nivelOportunidad || '-'} · Prioridad ${i.prioridadComercial || '-'}</span>` : ''}
-          <span class="badge ${badgeClaseInspeccion(i.estado)}">${i.estado}</span>
-        </div>
-      </a>`;
+      <div class="fila-auditoria">
+        <a href="${href}">
+          <div>
+            <p>${formatFecha(i.fecha)}</p>
+          </div>
+          <div class="der">
+            ${i.estado === 'Finalizada' ? `<span class="muted">${i.nivelOportunidad || '-'} · Prioridad ${i.prioridadComercial || '-'}</span>` : ''}
+            <span class="badge ${badgeClaseInspeccion(i.estado)}">${i.estado}</span>
+          </div>
+        </a>
+        ${puedeEliminar ? `<button type="button" class="btnEliminarInspeccion" data-id="${i.id}" title="Eliminar inspección">✕</button>` : ''}
+      </div>`;
   }).join('');
+
+  document.querySelectorAll('.btnEliminarInspeccion').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!confirm('¿Eliminar esta inspección? Esta acción no se puede deshacer.')) return;
+      btn.disabled = true;
+      try {
+        const res = await apiPost('eliminarInspeccion', { idInspeccion: btn.dataset.id });
+        if (res.ok) {
+          await cargarTodo();
+        } else {
+          alert(res.error || 'No se pudo eliminar la inspección.');
+          btn.disabled = false;
+        }
+      } catch (err) {
+        alert('No se pudo conectar con el servidor. Probá de nuevo.');
+        btn.disabled = false;
+      }
+    });
+  });
 }
 
 async function iniciarInspeccion() {
