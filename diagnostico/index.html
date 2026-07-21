@@ -14,98 +14,205 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="icon" type="image/png" href="../assets/img/logo.png">
 <style>
-  body { padding-bottom: 40px; }
+  :root { --sidebar-w: 280px; }
 
-  .encabezado {
+  body { padding-bottom: 0; }
+  * { transition: background-color .18s ease, border-color .18s ease, opacity .18s ease, transform .18s ease; }
+
+  /* ── Pantalla de intro (sin sidebar todavía) ─────────────────── */
+  .intro-pantalla {
+    max-width: 620px; margin: 0 auto; padding: 60px 24px; text-align: center;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .intro-logo { width: 40px; height: 40px; border-radius: 10px; margin-bottom: 18px; }
+  .intro-pantalla h1 { font-size: 28px; margin-bottom: 12px; }
+  .intro-pantalla p { color: var(--text-secondary); font-size: 15px; line-height: 1.6; margin-bottom: 28px; max-width: 460px; }
+  .intro-pills { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 28px; }
+  .intro-pill {
+    font-size: 12px; color: var(--text-secondary); background: var(--bg-card-alt);
+    border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px;
+  }
+  #btnEmpezar { padding: 14px 32px; font-size: 15px; border-radius: 12px; }
+
+  /* ── Layout general del wizard ───────────────────────────────── */
+  .app-wizard { display: flex; min-height: 100vh; }
+
+  /* Sidebar fija (desktop) */
+  .sidebar {
+    width: var(--sidebar-w); flex-shrink: 0; background: var(--bg-card-alt);
+    border-right: 1px solid var(--border); padding: 28px 22px;
+    display: flex; flex-direction: column; gap: 24px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  .sidebar-logo { display: flex; align-items: center; gap: 10px; }
+  .sidebar-logo img { width: 26px; height: 26px; border-radius: 8px; }
+  .sidebar-logo span { font-size: 13px; font-weight: 600; letter-spacing: .03em; }
+
+  .sidebar-progreso .barra-avance { height: 7px; margin-bottom: 8px; }
+  .progreso-texto { font-size: 12px; color: var(--text-secondary); }
+
+  .sidebar-bloques { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+  .item-bloque {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px;
+    border-radius: 8px; font-size: 13px; color: var(--text-muted);
+  }
+  .item-bloque .marca {
+    width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; border: 1.5px solid var(--border-strong);
+  }
+  .item-bloque.completado { color: var(--text-secondary); }
+  .item-bloque.completado .marca { background: var(--success-soft); border-color: var(--success); color: var(--success); }
+  .item-bloque.actual { color: var(--text-primary); font-weight: 600; background: var(--accent-soft); }
+  .item-bloque.actual .marca { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .item-bloque.pendiente { opacity: .55; }
+
+  .sidebar-nota {
+    font-size: 11.5px; color: var(--text-muted); line-height: 1.5;
+    border-top: 1px solid var(--border); padding-top: 14px;
+  }
+
+  /* Topbar (mobile — reemplaza a la sidebar) */
+  .topbar-mobile { display: none; }
+
+  /* ── Área principal ───────────────────────────────────────────── */
+  .contenido-principal { flex: 1; min-width: 0; }
+  .contenido-principal-inner { max-width: 680px; margin: 0 auto; padding: 48px 32px 40px; }
+
+  .encabezado-bloque h1 { font-size: 24px; margin-bottom: 6px; }
+  .encabezado-bloque .subtitulo-bloque { color: var(--text-secondary); font-size: 14px; margin-bottom: 30px; }
+
+  /* ── Cards de pregunta ────────────────────────────────────────── */
+  .pregunta-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 22px; margin-bottom: 18px;
+  }
+  .pregunta-card-cabecera { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+  .pregunta-icono {
+    width: 32px; height: 32px; border-radius: 9px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: #fff;
+  }
+  .pregunta-texto { font-size: 15px; font-weight: 500; line-height: 1.4; }
+  .pregunta-contador { font-size: 11.5px; color: var(--text-muted); font-weight: 400; display: block; margin-top: 2px; }
+
+  /* Opciones como cards seleccionables (no chips chicos) */
+  .opciones-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .opcion-card {
     display: flex; align-items: center; gap: 10px;
-    padding: 16px 20px;
+    border: 1.5px solid var(--border-strong); background: var(--bg-card-alt);
+    color: var(--text-primary); border-radius: 12px; padding: 13px 14px;
+    font-size: 13.5px; cursor: pointer; text-align: left; line-height: 1.35;
   }
-  .encabezado img { width: 26px; height: 26px; border-radius: 50%; }
-  .encabezado span { font-size: 14px; font-weight: 500; }
-
-  .intro { max-width: 560px; margin: 0 auto; padding: 20px; text-align: center; }
-  .intro h1 { margin-bottom: 10px; }
-  .intro p { color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; }
-
-  .barra-avance {
-    height: 6px; border-radius: 4px; background: var(--bg-card-alt);
-    overflow: hidden; margin: 4px 0 6px;
+  .opcion-card:hover:not(:disabled) { border-color: var(--accent); }
+  .opcion-card .check {
+    width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--border-strong);
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #fff;
   }
-  .barra-avance .relleno { height: 100%; background: var(--accent); transition: width .25s; }
-  .texto-avance { font-size: 12px; text-align: center; margin-bottom: 4px; }
-
-  .wizard { max-width: 560px; margin: 0 auto; padding: 0 20px; }
-  .bloque-titulo { margin-bottom: 16px; }
-
-  .pregunta { margin-bottom: 24px; }
-  .pregunta-texto { font-size: 14px; margin-bottom: 10px; font-weight: 500; }
-  .pregunta-contador { font-size: 11px; color: var(--text-muted); font-weight: 400; }
-
-  .opciones { display: flex; flex-wrap: wrap; gap: 8px; }
-  .opcion-btn {
-    border: 1px solid var(--border-strong); background: var(--bg-card);
-    color: var(--text-primary); border-radius: 20px; padding: 9px 16px;
-    font-size: 13px; cursor: pointer; text-align: left;
+  .opciones-cards.tipo-unica .check { border-radius: 50%; }
+  .opcion-card.seleccionada {
+    border-color: var(--accent); background: var(--accent-soft);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
   }
-  .opcion-btn:hover { opacity: 0.85; }
-  .opcion-btn.seleccionada {
-    background: var(--accent); border-color: var(--accent); color: #fff;
+  .opcion-card.seleccionada .check { background: var(--accent); border-color: var(--accent); }
+  .opcion-card:disabled { opacity: .4; cursor: not-allowed; }
+
+  .escala-opciones { display: flex; gap: 8px; }
+  .escala-opciones .opcion-card { flex: 1; justify-content: center; text-align: center; font-size: 15px; font-weight: 600; padding: 14px 0; }
+  .escala-opciones .check { display: none; }
+
+  .otro-texto { margin-top: 12px; }
+  .pregunta-card input[type="text"] {
+    width: 100%; padding: 13px 14px; border-radius: 10px; border: 1.5px solid var(--border-strong);
+    background: var(--bg-input); color: var(--text-primary); font-size: 14px;
   }
-  .opcion-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .pregunta-card input[type="text"]:focus { outline: none; border-color: var(--accent); }
 
-  .escala-opciones .opcion-btn { min-width: 44px; text-align: center; }
+  /* Honeypot */
+  .campo-verif { position: absolute; left: -9999px; top: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
-  .otro-texto { margin-top: 10px; }
+  .nav-wizard { display: flex; justify-content: space-between; margin-top: 8px; gap: 10px; }
+  .btn-grande { padding: 13px 26px; border-radius: 12px; font-size: 14px; font-weight: 600; }
 
-  /* Honeypot: existe en el DOM para bots simples, invisible para humanos */
-  .campo-verif {
-    position: absolute; left: -9999px; top: -9999px;
-    width: 1px; height: 1px; overflow: hidden;
-  }
-
-  .nav-wizard { display: flex; justify-content: space-between; margin-top: 28px; gap: 10px; }
-
-  @media (max-width: 480px) {
-    .opcion-btn { font-size: 13px; padding: 8px 12px; }
+  /* ── Responsive ───────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .topbar-mobile {
+      display: flex; align-items: center; gap: 10px; padding: 14px 18px;
+      border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-page); z-index: 5;
+    }
+    .topbar-mobile img { width: 22px; height: 22px; border-radius: 6px; }
+    .topbar-mobile span { font-size: 12px; font-weight: 600; flex-shrink: 0; }
+    .topbar-mobile .barra-avance { flex: 1; height: 6px; margin: 0; }
+    .contenido-principal-inner { padding: 24px 16px 32px; }
+    .encabezado-bloque h1 { font-size: 20px; }
+    .opciones-cards { grid-template-columns: 1fr; }
+    .nav-wizard .btn, .nav-wizard .btn-grande { flex: 1; }
   }
 </style>
 </head>
 <body>
 
-<div class="encabezado">
-  <img src="../assets/img/logo.png" alt="Eleva Lab">
-  <span>ELEVA LAB</span>
-</div>
-
-<div class="intro" id="intro">
-  <h1>Diagnóstico gratuito para tu negocio</h1>
+<div class="intro-pantalla" id="intro">
+  <img src="../assets/img/logo.png" alt="Eleva Lab" class="intro-logo">
+  <h1>Diagnóstico gratuito para tu negocio 👋</h1>
   <p>
-    Respondé estas preguntas (5 a 8 minutos) y recibí un diagnóstico simple sobre
-    tu presencia digital y organización — más algunas ideas para mejorar.
-    Tus respuestas también nos ayudan a entender qué necesitan los pequeños
+    Respondé estas preguntas y recibí un diagnóstico simple sobre tu presencia
+    digital y organización — más algunas ideas concretas para mejorar. Tus
+    respuestas también nos ayudan a entender qué necesitan los pequeños
     negocios de verdad.
   </p>
+  <div class="intro-pills">
+    <span class="intro-pill">⏱ 5 a 8 minutos</span>
+    <span class="intro-pill">🔒 Sin costo</span>
+    <span class="intro-pill">📋 9 bloques cortos</span>
+  </div>
   <button type="button" class="btn-primary" id="btnEmpezar">Empezar diagnóstico</button>
 </div>
 
-<div class="wizard oculto" id="wizard">
-  <div class="barra-avance"><div class="relleno" id="relleno" style="width:0%"></div></div>
-  <p class="texto-avance muted" id="textoAvance"></p>
+<div class="app-wizard oculto" id="wizard">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="../assets/img/logo.png" alt="Eleva Lab">
+      <span>ELEVA LAB</span>
+    </div>
+    <div class="sidebar-progreso">
+      <div class="barra-avance"><div class="relleno" id="relleno" style="width:0%"></div></div>
+      <p class="progreso-texto" id="progresoTexto">0% completado</p>
+    </div>
+    <nav class="sidebar-bloques" id="sidebarBloques" aria-label="Progreso por bloque"></nav>
+    <div class="sidebar-nota">No cierres ni recargues la página: tus respuestas se guardan al enviar el formulario completo, no antes.</div>
+  </aside>
 
-  <div id="mensaje" class="mensaje-error"></div>
+  <main class="contenido-principal">
+    <div class="topbar-mobile">
+      <img src="../assets/img/logo.png" alt="Eleva Lab">
+      <span>ELEVA LAB</span>
+      <div class="barra-avance"><div class="relleno" id="rellenoMobile" style="width:0%"></div></div>
+    </div>
 
-  <div id="contenidoBloque"></div>
+    <div class="contenido-principal-inner">
+      <header class="encabezado-bloque">
+        <h1 id="tituloBloque"></h1>
+        <p class="subtitulo-bloque">Estas respuestas nos ayudan a armar tu diagnóstico personalizado.</p>
+      </header>
 
-  <!-- Honeypot -->
-  <div class="campo-verif" aria-hidden="true">
-    <label for="campoVerif">No completar este campo</label>
-    <input type="text" id="campoVerif" name="campoVerif" tabindex="-1" autocomplete="off">
-  </div>
+      <div id="mensaje" class="mensaje-error"></div>
 
-  <div class="nav-wizard">
-    <button type="button" class="btn" id="btnAnterior">← Anterior</button>
-    <button type="button" class="btn-primary" id="btnSiguiente">Siguiente →</button>
-  </div>
+      <div id="contenidoBloque"></div>
+
+      <!-- Honeypot: existe en el DOM para bots simples, invisible para humanos -->
+      <div class="campo-verif" aria-hidden="true">
+        <label for="campoVerif">No completar este campo</label>
+        <input type="text" id="campoVerif" name="campoVerif" tabindex="-1" autocomplete="off">
+      </div>
+
+      <div class="nav-wizard">
+        <button type="button" class="btn" id="btnAnterior">← Atrás</button>
+        <button type="button" class="btn-primary btn-grande" id="btnSiguiente">Siguiente →</button>
+      </div>
+    </div>
+  </main>
 </div>
 
 <div class="wizard oculto" id="cargando">
