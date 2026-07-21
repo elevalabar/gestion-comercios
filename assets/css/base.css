@@ -104,7 +104,7 @@ button:active, .btn:active { transform: scale(0.98); }
 }
 .badge-alta    { background: var(--danger-soft); color: var(--danger); }
 .badge-media   { background: var(--warning-soft); color: var(--warning); }
-.badge-baja    { background: var(--bg-card-alt); color: var(--text-secondary); }
+.badge-baja    { background: var(--warning-soft); color: var(--warning); }
 .badge-cliente { background: var(--success-soft); color: var(--success); }
 
 /* Mensajes de error / estado */
