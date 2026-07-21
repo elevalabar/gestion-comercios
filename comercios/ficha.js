@@ -59,6 +59,7 @@ async function cargarTodo() {
   const auds = datos.auditorias;
   const insps = datos.inspecciones;
   const imgs = datos.imagenes;
+  const archivos = datos.archivos;
 
   comercioActual = c;
   auditoriasActuales = Array.isArray(auds) ? auds : [];
@@ -73,9 +74,9 @@ async function cargarTodo() {
   pintarInspeccionesTab(inspeccionesActuales);
   await pintarResumen(c, auditoriasActuales, inspeccionesActuales);
 
-  pintarImagenes(Array.isArray(imgs) ? imgs : []);
   IMAGENES_ACTUALES = Array.isArray(imgs) ? imgs : [];
-  cargarArchivos();
+  pintarImagenes(IMAGENES_ACTUALES);
+  pintarArchivos(Array.isArray(archivos) ? archivos : []);
 }
 
 // ─────────────────────────────────────────────
@@ -389,12 +390,6 @@ document.getElementById('formFicha').addEventListener('submit', async (e) => {
 
 let IMAGENES_ACTUALES = [];
 
-async function cargarImagenes() {
-  const imgs = await apiGet('getImagenes', { idComercio: ID_COMERCIO });
-  IMAGENES_ACTUALES = Array.isArray(imgs) ? imgs : [];
-  pintarImagenes(IMAGENES_ACTUALES);
-}
-
 function pintarImagenes(imgs) {
   const grid = document.getElementById('fotosGridVista');
 
@@ -448,7 +443,10 @@ function pintarImagenes(imgs) {
         alert((res && res.error) || 'No se pudo eliminar la foto.');
         return;
       }
-      cargarImagenes();
+      // Recargar imágenes desde el backend para reflejar el cambio
+      const imgsNuevas = await apiGet('getImagenes', { idComercio: ID_COMERCIO });
+      IMAGENES_ACTUALES = Array.isArray(imgsNuevas) ? imgsNuevas : [];
+      pintarImagenes(IMAGENES_ACTUALES);
     });
   });
 }
@@ -501,7 +499,10 @@ document.getElementById('btnSubirFoto').addEventListener('click', async () => {
       btnSubir.classList.add('oculto');
       btnSubir.disabled = false;
       estado.textContent = '';
-      cargarImagenes();
+      // Recargar imágenes desde el backend
+      const imgsNuevas = await apiGet('getImagenes', { idComercio: ID_COMERCIO });
+      IMAGENES_ACTUALES = Array.isArray(imgsNuevas) ? imgsNuevas : [];
+      pintarImagenes(IMAGENES_ACTUALES);
     } catch (err) {
       estado.textContent = 'No se pudo conectar con el servidor. Probá de nuevo.';
       btnSubir.disabled = false;
