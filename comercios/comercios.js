@@ -105,7 +105,7 @@ function renderTarjetaComercio(c) {
     : '';
 
   return `
-    <div class="tarjeta-comercio">
+    <div class="tarjeta-comercio" data-id="${c.ID}" style="cursor: pointer;">
       <div class="tc-cabecera">
         <div>
           <p class="tc-nombre">${c.Nombre || 'Sin nombre'}</p>
@@ -252,6 +252,50 @@ function pintarLista(lista) {
   document.querySelectorAll('.btn-menu').forEach(btn => {
     btn.addEventListener('click', onClickMenu);
   });
+  
+  // Hacer toda la tarjeta clickeable para ir a la ficha
+  document.querySelectorAll('.tarjeta-comercio').forEach(card => {
+    card.addEventListener('click', (e) => {
+      // No navegar si clickeó en botones, menú o enlaces internos
+      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.tc-menu-wrap')) return;
+      window.location.href = `ficha.html?id=${encodeURIComponent(card.dataset.id)}`;
+    });
+  });
+}
+
+// ── Filtros y búsqueda ────────────────────────────────────────────
+
+function aplicarFiltros() {
+  const texto = document.getElementById('buscador').value.toLowerCase().trim();
+  const estado = document.getElementById('filtroEstado').value;
+  const prioridad = document.getElementById('filtroPrioridad').value;
+  const rubro = document.getElementById('filtroRubro').value;
+  const localidad = document.getElementById('filtroLocalidad').value;
+  const orden = document.getElementById('filtroOrden').value;
+
+  let filtrados = TODOS_LOS_COMERCIOS.filter(c => {
+    const matchTexto = !texto ||
+      (c.Nombre || '').toLowerCase().includes(texto) ||
+      (c.Rubro || '').toLowerCase().includes(texto);
+    const matchEstado = !estado || c.Estado === estado;
+    const matchPrioridad = !prioridad || c.Prioridad === prioridad;
+    const matchRubro = !rubro || c.Rubro === rubro;
+    const loc = extraerLocalidad(c['Dirección']);
+    const matchLocalidad = !localidad || loc === localidad;
+
+    return matchTexto && matchEstado && matchPrioridad && matchRubro && matchLocalidad;
+  });
+
+  if (orden === 'recientes') {
+    filtrados.sort((a, b) => new Date(b['Fecha de alta'] || 0) - new Date(a['Fecha de alta'] || 0));
+  } else if (orden === 'nombre') {
+    filtrados.sort((a, b) => (a.Nombre || '').localeCompare(b.Nombre || ''));
+  } else if (orden === 'prioridad') {
+    const peso = { 'Alta': 3, 'Media': 2, 'Baja': 1, '': 0 };
+    filtrados.sort((a, b) => (peso[b.Prioridad] || 0) - (peso[a.Prioridad] || 0));
+  }
+
+  pintarLista(filtrados);
 }
 
 // ── Carga inicial ──────────────────────────────────────────────────
@@ -269,15 +313,17 @@ async function cargarComercios() {
   actualizarStats();
   poblarFiltrosDinamicos();
   pintarLista(TODOS_LOS_COMERCIOS);
+
+  // Cachear para que panel.js no tenga que volver a pedirlos
+  sessionStorage.setItem('eleva_comercios_cache', JSON.stringify(TODOS_LOS_COMERCIOS));
+  sessionStorage.setItem('eleva_comercios_cache_time', String(Date.now()));
 }
 
-document.getElementById('buscador').addEventListener('input', (e) => {
-  const texto = e.target.value.toLowerCase().trim();
-  const filtrados = TODOS_LOS_COMERCIOS.filter(c =>
-    (c.Nombre || '').toLowerCase().includes(texto) ||
-    (c.Rubro || '').toLowerCase().includes(texto)
-  );
-  pintarLista(filtrados);
-});
+document.getElementById('buscador').addEventListener('input', aplicarFiltros);
+document.getElementById('filtroEstado').addEventListener('change', aplicarFiltros);
+document.getElementById('filtroPrioridad').addEventListener('change', aplicarFiltros);
+document.getElementById('filtroRubro').addEventListener('change', aplicarFiltros);
+document.getElementById('filtroLocalidad').addEventListener('change', aplicarFiltros);
+document.getElementById('filtroOrden').addEventListener('change', aplicarFiltros);
 
 cargarComercios();
