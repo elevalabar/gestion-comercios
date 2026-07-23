@@ -9,6 +9,7 @@
 const SECCIONES = [
   { id: 'panel',       label: 'Panel',       icon: '▦', href: 'panel/index.html' },
   { id: 'comercios',   label: 'Comercios',   icon: '⌂', href: 'comercios/index.html' },
+  { id: 'prospector',  label: 'Prospector',  icon: '⌕', href: 'prospector/index.html' },
   { id: 'seguimiento', label: 'Seguimiento', icon: '◷', href: 'seguimiento/index.html' },
   { id: 'encuestas',   label: 'Encuestas',   icon: '📋', href: 'encuestas/index.html' }
 ];
