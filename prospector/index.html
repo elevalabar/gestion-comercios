@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prospector · Eleva Lab</title>
+<script>
+  (function () {
+    const tema = localStorage.getItem('eleva_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', tema);
+  })();
+</script>
+<link rel="stylesheet" href="../assets/css/variables.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="icon" type="image/png" href="../assets/img/logo.png">
+<style>
+  /* ── Cabecera de métricas (mismo patrón que Comercios/Encuestas) ── */
+  .stats-header {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 24px 0;
+  }
+  .stat-card { background: var(--bg-card-alt); border-radius: var(--radius); padding: 16px; }
+  .stat-card p.stat-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+  .stat-card p.stat-valor { font-size: 24px; font-weight: 500; color: var(--text-primary); }
+
+  /* ── Pestañas ────────────────────────────────────────────────── */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .tab-btn {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    padding: 10px 4px; margin-right: 20px; font-size: 14px; color: var(--text-secondary);
+    cursor: pointer; border-radius: 0;
+  }
+  .tab-btn:hover { background: none; opacity: 1; color: var(--text-primary); }
+  .tab-btn.activa { color: var(--text-primary); border-color: var(--accent); font-weight: 500; }
+  .tab-panel { display: none; }
+  .tab-panel.activa { display: block; }
+
+  /* ── Zona de carga (drag & drop) ────────────────────────────── */
+  .dropzone {
+    border: 2px dashed var(--border-strong);
+    border-radius: var(--radius-lg);
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .dropzone:hover, .dropzone.sobre-arrastre { border-color: var(--accent); background: var(--accent-soft); }
+  .dropzone .icono-drop { font-size: 32px; margin-bottom: 12px; }
+  .dropzone p.principal { font-size: 15px; color: var(--text-primary); margin-bottom: 4px; }
+  .dropzone p.secundario { font-size: 13px; color: var(--text-secondary); }
+  .dropzone input[type="file"] { display: none; }
+
+  .archivo-elegido {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg-card-alt); border-radius: var(--radius);
+    padding: 12px 16px; margin-bottom: 20px;
+  }
+  .archivo-elegido .nombre-archivo { font-size: 13px; color: var(--text-primary); }
+  .archivo-elegido button { font-size: 12px; padding: 6px 10px; }
+
+  /* ── Resumen de mapeo detectado ─────────────────────────────── */
+  .mapeo-resumen {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+    margin: 16px 0 24px;
+  }
+  .mapeo-chip {
+    background: var(--bg-card-alt); border-radius: var(--radius);
+    padding: 8px 12px; font-size: 12px;
+  }
+  .mapeo-chip .campo { color: var(--text-secondary); display: block; margin-bottom: 2px; }
+  .mapeo-chip .valor { color: var(--text-primary); font-weight: 500; }
+  .mapeo-chip.sin-detectar .valor { color: var(--text-muted); font-weight: 400; }
+
+  /* ── Tabla (mismo patrón que Encuestas) ─────────────────────── */
+  table.tabla-prospector { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
+  .tabla-prospector col.col-img      { width: 56px; }
+  .tabla-prospector col.col-nombre   { width: 20%; }
+  .tabla-prospector col.col-rubro    { width: 14%; }
+  .tabla-prospector col.col-rating   { width: 9%; }
+  .tabla-prospector col.col-resenas  { width: 9%; }
+  .tabla-prospector col.col-dir      { width: 22%; }
+  .tabla-prospector col.col-estado   { width: 12%; }
+  .tabla-prospector col.col-acciones { width: 14%; }
+
+  .tabla-prospector th {
+    text-align: left; padding: 10px 12px; color: var(--text-secondary);
+    font-weight: 500; border-bottom: 1px solid var(--border);
+  }
+  .tabla-prospector td {
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+    color: var(--text-primary); vertical-align: middle;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tabla-prospector tr:last-child td { border-bottom: none; }
+  .tabla-prospector tr:hover { background: var(--bg-card-alt); }
+  .celda-muted { color: var(--text-secondary); }
+
+  .miniatura-comercio {
+    width: 36px; height: 36px; border-radius: 8px; object-fit: cover;
+    background: var(--bg-card-alt); display: block;
+  }
+
+  .badge-prospeccion-pendiente { background: var(--warning-soft); color: var(--warning); }
+  .badge-prospeccion-auditado  { background: var(--success-soft); color: var(--success); }
+
+  .celda-acciones { display: flex; gap: 6px; }
+  .celda-acciones a, .celda-acciones button {
+    width: 28px; height: 28px; padding: 0; font-size: 13px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--bg-card-alt); border-color: var(--border);
+  }
+  .celda-acciones .peligro:hover { color: var(--danger); border-color: var(--danger); }
+
+  .filtros-barra { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .filtros-barra input[type="text"] { flex: 2; min-width: 200px; }
+  .filtros-barra select { flex: 1; min-width: 130px; }
+
+  .resultado-import {
+    border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px;
+    font-size: 13px; display: none;
+  }
+  .resultado-import.ok { display: block; background: var(--success-soft); color: var(--success); }
+  .resultado-import.error { display: block; background: var(--danger-soft); color: var(--danger); }
+
+  @media (max-width: 640px) {
+    .stats-header { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div id="nav-top"></div>
+
+<div class="container" style="padding-top: 24px;">
+  <h1>Prospector</h1>
+  <p class="muted">Importá comercios masivamente desde un CSV de Google Maps (Instant Data Scraper).</p>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn activa" data-tab="importar">Importar CSV</button>
+    <button type="button" class="tab-btn" data-tab="importados">Comercios Importados</button>
+  </div>
+
+  <!-- ── PESTAÑA: IMPORTAR CSV ─────────────────────────────────── -->
+  <div class="tab-panel activa" id="panel-importar">
+
+    <div class="dropzone" id="dropzone">
+      <div class="icono-drop">📄</div>
+      <p class="principal">Arrastrá el CSV acá o hacé clic para elegirlo</p>
+      <p class="secundario">Exportado con Instant Data Scraper desde Google Maps</p>
+      <input type="file" id="inputArchivo" accept=".csv">
+    </div>
+
+    <div id="archivoElegido" class="archivo-elegido" style="display:none;">
+      <span class="nombre-archivo" id="nombreArchivo"></span>
+      <button type="button" class="btn" id="btnQuitarArchivo">Quitar</button>
+    </div>
+
+    <div id="resultadoImport" class="resultado-import"></div>
+
+    <div id="previaWrap" style="display:none;">
+      <div class="stats-header" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="stat-card">
+          <p class="stat-label">Comercios encontrados</p>
+          <p class="stat-valor" id="statEncontrados">—</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Columnas detectadas</p>
+          <p class="stat-valor" id="statColumnas">—</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Campos mapeados</p>
+          <p class="stat-valor" id="statMapeados">—</p>
+        </div>
+      </div>
+
+      <p class="muted" style="margin-bottom:8px;">Mapeo detectado (revisá antes de importar):</p>
+      <div class="mapeo-resumen" id="mapeoResumen"></div>
+
+      <p class="muted" style="margin-bottom:8px;">Vista previa (primeras 10 filas):</p>
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="tabla-wrap">
+          <table class="tabla-prospector">
+            <colgroup>
+              <col class="col-img"><col class="col-nombre"><col class="col-rubro">
+              <col class="col-rating"><col class="col-resenas"><col class="col-dir">
+            </colgroup>
+            <thead>
+              <tr><th></th><th>Nombre</th><th>Rubro</th><th>Rating</th><th>Reseñas</th><th>Dirección</th></tr>
+            </thead>
+            <tbody id="cuerpoPrevia"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-primary" id="btnImportar">Importar</button>
+    </div>
+  </div>
+
+  <!-- ── PESTAÑA: COMERCIOS IMPORTADOS ─────────────────────────── -->
+  <div class="tab-panel" id="panel-importados">
+
+    <div class="stats-header">
+      <div class="stat-card">
+        <p class="stat-label">Comercios importados</p>
+        <p class="stat-valor" id="statImportados">—</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Pendientes de auditoría</p>
+        <p class="stat-valor" id="statPendientes">—</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Auditados</p>
+        <p class="stat-valor" id="statAuditados">—</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Promedio de rating</p>
+        <p class="stat-valor" id="statPromedioRating">—</p>
+      </div>
+    </div>
+
+    <div class="filtros-barra">
+      <input type="text" id="buscador" placeholder="Buscar por nombre...">
+      <select id="filtroRubro"><option value="">Rubro</option></select>
+      <select id="filtroEstadoProspeccion">
+        <option value="">Estado</option>
+        <option value="Pendiente de Auditoría">Pendiente de Auditoría</option>
+        <option value="Auditado">Auditado</option>
+      </select>
+      <select id="filtroRating">
+        <option value="">Rating</option>
+        <option value="4.5">4.5+</option>
+        <option value="4">4+</option>
+        <option value="3">3+</option>
+      </select>
+      <select id="filtroResenas">
+        <option value="">Cantidad de reseñas</option>
+        <option value="100">100+</option>
+        <option value="50">50+</option>
+        <option value="10">10+</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <div class="tabla-wrap">
+        <table class="tabla-prospector">
+          <colgroup>
+            <col class="col-img"><col class="col-nombre"><col class="col-rubro">
+            <col class="col-rating"><col class="col-resenas"><col class="col-dir">
+            <col class="col-estado"><col class="col-acciones">
+          </colgroup>
+          <thead>
+            <tr>
+              <th></th><th>Nombre</th><th>Rubro</th><th>Rating</th><th>Reseñas</th>
+              <th>Dirección</th><th>Estado</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="cuerpoTablaImportados">
+            <tr><td colspan="8" class="muted">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="nav-bottom"></div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/nav.js"></script>
+<script>
+  requireAuth('../index.html');
+  renderNav('prospector', '../');
+</script>
+<script src="detector.js"></script>
+<script src="prospector.js"></script>
+</body>
+</html>
