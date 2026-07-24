@@ -65,6 +65,102 @@ let FILAS_CSV = [];       // filas crudas del CSV (sin encabezado)
 let MAPEO_ACTUAL = null;  // resultado de detectarColumnas()
 let COMERCIOS_A_IMPORTAR = []; // ya mapeados, lo que se manda al importar
 let TODOS_LOS_IMPORTADOS = [];
+let COMERCIOS_EXISTENTES_CACHE = null; // todos los comercios ya cargados (para chequeo de duplicados)
+
+// ── Chequeo de posibles duplicados contra lo ya cargado ─────────────
+// El backend ya deduplica por match EXACTO (Google Maps URL, o
+// Nombre+Dirección normalizados) — eso cubre el caso de reimportar el
+// mismo CSV. Esto es distinto: cubre el caso de un comercio cargado a
+// mano con un nombre más corto o distinto al que trae Google Maps
+// (ej. "Rouge" cargado a mano vs. "Rouge Salon by Verdini" del CSV),
+// que el match exacto no puede detectar. Es una ayuda para revisar,
+// no un descarte automático — la decisión final queda en el checkbox.
+
+function normalizarTexto(s) {
+  return (s || '').toString()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // saca acentos
+    .toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+function compararNombres(nombreNuevo, nombreExistente) {
+  const a = normalizarTexto(nombreNuevo);
+  const b = normalizarTexto(nombreExistente);
+  if (!a || !b) return null;
+  if (a === b) return 'exacto';
+
+  const wa = new Set(a.split(' ').filter(w => w.length > 2));
+  const wb = new Set(b.split(' ').filter(w => w.length > 2));
+  if (wa.size === 0 || wb.size === 0) return null;
+
+  const [menor, mayor] = wa.size <= wb.size ? [wa, wb] : [wb, wa];
+  let contenidas = 0;
+  menor.forEach(w => { if (mayor.has(w)) contenidas++; });
+  // todas (o casi todas) las palabras del nombre más corto aparecen en el más largo
+  return (contenidas / menor.size) >= 0.9 ? 'similar' : null;
+}
+
+async function cargarComerciosExistentes() {
+  if (COMERCIOS_EXISTENTES_CACHE) return COMERCIOS_EXISTENTES_CACHE;
+  try {
+    const res = await apiGet('getComercios');
+    COMERCIOS_EXISTENTES_CACHE = Array.isArray(res) ? res : (res.datos || []);
+  } catch (err) {
+    COMERCIOS_EXISTENTES_CACHE = []; // si falla, seguimos sin bloquear la previsualización
+  }
+  return COMERCIOS_EXISTENTES_CACHE;
+}
+
+async function marcarPosiblesDuplicados(comercios) {
+  const existentes = await cargarComerciosExistentes();
+  comercios.forEach(c => {
+    c._duplicado = null;
+    c._duplicadoCon = null;
+    c._excluir = false;
+    for (const existente of existentes) {
+      const tipo = compararNombres(c.nombre, existente.Nombre);
+      if (tipo) {
+        c._duplicado = tipo;
+        c._duplicadoCon = existente.Nombre;
+        c._excluir = (tipo === 'exacto'); // match exacto: se excluye por default; "similar" queda a tu criterio
+        if (tipo === 'exacto') break; // no hace falta seguir buscando, ya es lo más fuerte posible
+      }
+    }
+  });
+  return comercios;
+}
+
+function renderRevisionDuplicados() {
+  const conDuplicado = COMERCIOS_A_IMPORTAR.filter(c => c._duplicado);
+  document.getElementById('statDuplicados').textContent = conDuplicado.length;
+
+  const wrap = document.getElementById('revisionDuplicados');
+  if (conDuplicado.length === 0) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'block';
+  document.getElementById('listaDuplicados').innerHTML = conDuplicado.map((c, i) => `
+    <div class="fila-duplicado">
+      <span class="etiqueta-match ${c._duplicado}">${c._duplicado === 'exacto' ? 'nombre idéntico' : 'se parece a'}</span>
+      <div class="comparacion">
+        <span class="nuevo">${escapeHtml(c.nombre)}</span>
+        <span class="flecha">≈</span>
+        <span class="existente">${escapeHtml(c._duplicadoCon)}</span>
+      </div>
+      <label>
+        <input type="checkbox" data-idx-dup="${COMERCIOS_A_IMPORTAR.indexOf(c)}" ${c._excluir ? 'checked' : ''}>
+        No importar este
+      </label>
+    </div>
+  `).join('');
+
+  document.getElementById('listaDuplicados').querySelectorAll('input[type=checkbox]').forEach(chk => {
+    chk.addEventListener('change', (e) => {
+      const idx = parseInt(e.target.dataset.idxDup, 10);
+      COMERCIOS_A_IMPORTAR[idx]._excluir = e.target.checked;
+    });
+  });
+}
 
 // ── Pestañas ────────────────────────────────────────────────────────
 
@@ -150,6 +246,7 @@ function analizarYMostrarPrevia() {
   document.getElementById('statEncontrados').textContent = filasUtiles;
   document.getElementById('statColumnas').textContent = columnas;
   document.getElementById('statMapeados').textContent = `${camposMapeados}/${Object.keys(ETIQUETAS_CAMPO).length}`;
+  document.getElementById('statDuplicados').textContent = '...';
 
   document.getElementById('mapeoResumen').innerHTML = Object.entries(ETIQUETAS_CAMPO).map(([campo, etiqueta]) => {
     const detectado = mapeo[campo] != null;
@@ -172,6 +269,10 @@ function analizarYMostrarPrevia() {
   `).join('');
 
   document.getElementById('previaWrap').style.display = 'block';
+
+  // el chequeo contra los comercios existentes se hace aparte porque
+  // depende de una llamada al servidor — no bloquea el resto de la previsualización
+  marcarPosiblesDuplicados(COMERCIOS_A_IMPORTAR).then(renderRevisionDuplicados);
 }
 
 function mostrarResultado(tipo, texto) {
@@ -184,18 +285,29 @@ function mostrarResultado(tipo, texto) {
 
 document.getElementById('btnImportar').addEventListener('click', async () => {
   const btn = document.getElementById('btnImportar');
+  const aExcluir = COMERCIOS_A_IMPORTAR.filter(c => c._excluir).length;
+  const aEnviar = COMERCIOS_A_IMPORTAR
+    .filter(c => !c._excluir)
+    .map(({ _duplicado, _duplicadoCon, _excluir, ...limpio }) => limpio); // saca los campos internos de UI antes de mandar
+
+  if (aEnviar.length === 0) {
+    mostrarResultado('error', 'No queda ningún comercio para importar (todos marcados como "no importar").');
+    return;
+  }
+
   btn.disabled = true;
   btn.textContent = 'Importando...';
 
   try {
-    const res = await apiPost('importarComerciosProspector', { comercios: COMERCIOS_A_IMPORTAR });
+    const res = await apiPost('importarComerciosProspector', { comercios: aEnviar });
     if (!res.ok) {
       mostrarResultado('error', res.error || 'No se pudo completar la importación.');
       return;
     }
     mostrarResultado('ok',
       `Listo: ${res.creados} comercios nuevos, ${res.actualizados} actualizados` +
-      (res.omitidos ? `, ${res.omitidos} sin cambios` : '') + '.'
+      (res.omitidos ? `, ${res.omitidos} sin cambios` : '') +
+      (aExcluir ? `, ${aExcluir} excluidos a mano` : '') + '.'
     );
     TODOS_LOS_IMPORTADOS = []; // fuerza recarga la próxima vez que se abra la pestaña
   } catch (err) {
