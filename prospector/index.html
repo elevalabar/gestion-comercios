@@ -115,6 +115,23 @@
   }
   .celda-acciones .peligro:hover { color: var(--danger); border-color: var(--danger); }
 
+  .fila-duplicado {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .fila-duplicado:last-child { border-bottom: none; }
+  .fila-duplicado .comparacion { flex: 1; }
+  .fila-duplicado .comparacion .nuevo { color: var(--text-primary); font-weight: 500; }
+  .fila-duplicado .comparacion .flecha { color: var(--text-muted); margin: 0 6px; }
+  .fila-duplicado .comparacion .existente { color: var(--text-secondary); }
+  .fila-duplicado .etiqueta-match {
+    font-size: 11px; padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+  }
+  .fila-duplicado .etiqueta-match.exacto { background: var(--danger-soft); color: var(--danger); }
+  .fila-duplicado .etiqueta-match.similar { background: var(--warning-soft); color: var(--warning); }
+  .fila-duplicado label { display: flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
+
   .filtros-barra { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
   .filtros-barra input[type="text"] { flex: 2; min-width: 200px; }
   .filtros-barra select { flex: 1; min-width: 130px; }
@@ -162,7 +179,7 @@
     <div id="resultadoImport" class="resultado-import"></div>
 
     <div id="previaWrap" style="display:none;">
-      <div class="stats-header" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="stats-header" style="grid-template-columns: repeat(4, 1fr);">
         <div class="stat-card">
           <p class="stat-label">Comercios encontrados</p>
           <p class="stat-valor" id="statEncontrados">—</p>
@@ -175,10 +192,21 @@
           <p class="stat-label">Campos mapeados</p>
           <p class="stat-valor" id="statMapeados">—</p>
         </div>
+        <div class="stat-card">
+          <p class="stat-label">Posibles duplicados</p>
+          <p class="stat-valor" id="statDuplicados">—</p>
+        </div>
       </div>
 
       <p class="muted" style="margin-bottom:8px;">Mapeo detectado (revisá antes de importar):</p>
       <div class="mapeo-resumen" id="mapeoResumen"></div>
+
+      <div id="revisionDuplicados" style="display:none; margin-bottom: 20px;">
+        <p class="muted" style="margin-bottom:8px;">
+          Estos se parecen a comercios que ya tenés cargados — revisá y destildá los que NO quieras importar:
+        </p>
+        <div class="card" id="listaDuplicados" style="padding: 4px 16px;"></div>
+      </div>
 
       <p class="muted" style="margin-bottom:8px;">Vista previa (primeras 10 filas):</p>
       <div class="card" style="margin-bottom: 20px;">
