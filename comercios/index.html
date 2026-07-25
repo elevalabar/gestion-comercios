@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Comercios · Eleva Lab</title>
+<title>Ficha de comercio · Eleva Lab</title>
 <script>
   (function () {
     const tema = localStorage.getItem('eleva_theme') || 'dark';
@@ -14,199 +14,412 @@
 <link rel="stylesheet" href="../assets/css/base.css">
 <link rel="icon" type="image/png" href="../assets/img/logo.png">
 <style>
-  /* ── Cabecera de métricas rápidas ──────────────────────────── */
-  .stats-header {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin: 24px 0;
-  }
-  .stat-card {
-    background: var(--bg-card-alt);
-    border-radius: var(--radius);
-    padding: 16px;
-  }
-  .stat-card p.stat-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
-  .stat-card p.stat-valor { font-size: 24px; font-weight: 500; color: var(--text-primary); }
-
-  /* ── Barra de filtros ──────────────────────────────────────── */
-  .filtros-barra {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 20px;
-  }
-  .filtros-barra input[type="text"] { flex: 2; min-width: 200px; }
-  .filtros-barra select { flex: 1; min-width: 130px; }
-
-  /* ── Grid de tarjetas ──────────────────────────────────────── */
-  .grid-comercios {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-  }
-  .grid-comercios p.muted { grid-column: 1 / -1; }
-
-  .tarjeta-comercio {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
-  }
-  .tarjeta-comercio:hover {
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-    border-color: var(--accent);
-    transform: translateY(-2px);
-  }
-
-  .tc-cabecera { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  .tc-nombre { font-size: 18px; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
-  .tc-rubro { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
-
-  .tc-badge-servicio { display: flex; align-items: center; gap: 6px; flex-shrink: 0; white-space: nowrap; }
-  .tc-punto { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-  .tc-punto-ok      { background: var(--success); }
-  .tc-punto-alerta  { background: var(--warning); }
-  .tc-punto-alto    { background: var(--danger); }
-  .tc-punto-neutro  { background: var(--text-muted); }
-  .tc-badge-servicio span.tc-label-servicio { font-size: 12px; color: var(--text-secondary); }
-
-  .tc-localidad {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 13px; color: var(--text-secondary);
-    margin-top: 18px;
-  }
-  .tc-localidad svg { flex-shrink: 0; }
-
-  .tc-canales { display: flex; gap: 8px; margin-top: 18px; }
-  .tc-canal {
-    width: 30px; height: 30px; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .tc-canal-inactivo { background: var(--bg-card-alt); color: var(--text-muted); }
-  .tc-canal-telefono.tc-canal-activo  { background: rgba(59,130,246,0.15);  color: #3B82F6; }
-  .tc-canal-whatsapp.tc-canal-activo  { background: rgba(37,211,102,0.15);  color: #25D366; }
-  .tc-canal-web.tc-canal-activo       { background: rgba(99,102,241,0.15); color: #6366F1; }
-  .tc-canal-maps.tc-canal-activo      { background: rgba(234,67,53,0.15);  color: #EA4335; }
-  .tc-canal-instagram.tc-canal-activo { background: rgba(228,64,95,0.15);  color: #E4405F; }
-  .tc-canal-facebook.tc-canal-activo  { background: rgba(24,119,242,0.15); color: #1877F2; }
-
-  .tc-completitud { margin-top: 22px; }
-  .tc-completitud-fila { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-  .tc-completitud-fila span { font-size: 12px; color: var(--text-secondary); }
-  .tc-barra { height: 4px; background: var(--bg-card-alt); border-radius: 4px; overflow: hidden; }
-  .tc-barra-relleno { height: 100%; background: var(--accent); border-radius: 4px; }
-
-  .tc-pie { display: flex; align-items: center; justify-content: space-between; margin-top: 22px; }
-  .tc-acciones-der { display: flex; align-items: center; gap: 8px; }
-
-  .btn-principal {
-    background: var(--accent); border-color: var(--accent); color: #fff;
-    font-size: 13px; padding: 8px 16px;
-  }
-  .btn-icono {
-    width: 32px; height: 32px; padding: 0;
-    background: transparent; border-color: var(--border);
-  }
-
-  .tc-menu-wrap { position: relative; }
-  .tc-menu-lista {
-    display: none;
-    position: absolute; right: 0; bottom: calc(100% + 6px);
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 6px;
-    min-width: 150px; z-index: 5;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-  }
-  .tc-menu-lista.abierto { display: block; }
-  .tc-menu-item {
-    display: block; width: 100%; text-align: left;
-    background: none; border: none; border-radius: 6px;
-    padding: 8px 10px; font-size: 13px; color: var(--text-primary);
-    cursor: pointer;
-  }
-  .tc-menu-item:hover { background: var(--bg-card-alt); opacity: 1; }
-  .tc-menu-item.peligro { color: var(--danger); }
-  .tc-menu-item[disabled] { opacity: 0.45; cursor: not-allowed; }
-  .tc-menu-item[disabled]:hover { background: none; }
-
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
   @media (max-width: 640px) {
-    .stats-header { grid-template-columns: repeat(2, 1fr); }
+    .form-grid { grid-template-columns: 1fr; }
   }
-  @media (max-width: 480px) {
-    .grid-comercios { grid-template-columns: 1fr; }
-    .tarjeta-comercio { padding: 20px; }
-    .filtros-barra select { flex: 1 1 100%; }
+  .seccion { margin-top: 20px; }
+  .seccion h3 { margin-bottom: 12px; }
+
+  .fotos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 12px; }
+  .foto-item { position: relative; border-radius: var(--radius); overflow: hidden; aspect-ratio: 1; border: 1px solid var(--border); }
+  .foto-item img { width: 100%; height: 100%; object-fit: cover; }
+  .foto-item button {
+    position: absolute; top: 4px; right: 4px; width: 22px; height: 22px;
+    padding: 0; border-radius: 50%; font-size: 11px; line-height: 1;
+    background: rgba(0,0,0,0.6); color: #fff; border: none;
   }
+  .foto-item .btnUsarPortada { left: 4px; right: auto; font-size: 13px; }
+  .foto-item .badge-portada {
+    position: absolute; top: 4px; left: 4px; padding: 2px 6px;
+    border-radius: var(--radius); font-size: 10px; font-weight: 600;
+    background: var(--primary, #6a5acd); color: #fff;
+  }
+
+  .subida-foto { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .lista-archivos { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .archivo-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+  }
+  .archivo-item a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .archivo-item button {
+    width: 22px; height: 22px; padding: 0; border-radius: 50%; font-size: 11px;
+    line-height: 1; background: rgba(0,0,0,0.6); color: #fff; border: none; flex-shrink: 0;
+  }
+
+  .fila-auditoria {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid var(--border); gap: 10px;
+  }
+  .fila-auditoria:last-child { border-bottom: none; }
+  .fila-auditoria > a {
+    flex: 1; display: flex; justify-content: space-between; align-items: center;
+    text-decoration: none; color: inherit; min-width: 0;
+  }
+  .fila-auditoria > a:hover { opacity: 0.8; text-decoration: none; }
+  .fila-auditoria .der { display: flex; align-items: center; gap: 10px; }
+  .btnEliminarAuditoria {
+    flex-shrink: 0; width: 26px; height: 26px; padding: 0; border-radius: 50%;
+    font-size: 12px; line-height: 1; background: rgba(0,0,0,0.15); color: inherit;
+    border: none; cursor: pointer;
+  }
+  .btnEliminarAuditoria:hover { background: rgba(200,50,50,0.35); }
+
+  .btnDescargarPDF {
+    flex-shrink: 0; width: 26px; height: 26px; padding: 0; border-radius: 50%;
+    font-size: 12px; line-height: 1; background: rgba(0,0,0,0.15); color: inherit;
+    border: none; cursor: pointer;
+  }
+  .btnDescargarPDF:hover { background: var(--accent-soft); color: var(--accent); }
+  .btnDescargarPDF:disabled { opacity: 0.5; cursor: default; }
+
+  .campo-con-link { display:flex; align-items:center; gap:6px; }
+  .campo-con-link input { flex:1; }
+  .campo-con-link .link-abrir {
+    flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    width:34px; height:34px; border-radius:6px; text-decoration:none;
+    font-size:16px; background:var(--color-primario,#7a5c3a); color:#fff;
+  }
+  .campo-con-link .link-abrir:hover { opacity:0.85; }
+
+  /* ================= MODO VISTA ================= */
+
+  .oculto { display: none !important; }
+
+  .layout-vista {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .layout-vista { grid-template-columns: 1fr; }
+  }
+
+  .panel-comercio { padding: 24px; }
+  .foto-comercio {
+    width: 100%; aspect-ratio: 4/3; border-radius: var(--radius);
+    overflow: hidden; margin-bottom: 16px; border: 1px solid var(--border);
+    background: var(--bg-card-alt); display: flex; align-items: center; justify-content: center;
+  }
+  .foto-comercio img { width: 100%; height: 100%; object-fit: cover; }
+  .foto-comercio .sin-foto { color: var(--text-muted); font-size: 13px; }
+
+  .nombre-comercio { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+
+  .estrellas { font-size: 15px; letter-spacing: 2px; margin-bottom: 2px; color: var(--warning); }
+  .estrellas .vacia { color: var(--border-strong); }
+  .estrellas-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 14px; }
+
+  .dato-linea {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;
+  }
+  .dato-linea .icono { width: 16px; text-align: center; flex-shrink: 0; }
+
+  .badges-fila { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 18px; }
+  .badge-punto::before { content: "●"; margin-right: 5px; font-size: 9px; }
+  .badge-servicio-activo { background: var(--success-soft); color: var(--success); }
+  .badge-servicio-pausado { background: var(--warning-soft); color: var(--warning); }
+  .badge-servicio-finalizado { background: var(--danger-soft); color: var(--danger); }
+  .badge-sin-servicio { background: var(--bg-card-alt); color: var(--text-muted); }
+
+  .divisor-vista { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  .contacto-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0; font-size: 13px;
+  }
+  .contacto-item .izq { display: flex; align-items: center; gap: 8px; color: var(--text-primary); min-width: 0; }
+  .contacto-item .izq span.valor { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .contacto-item .icono { width: 18px; text-align: center; flex-shrink: 0; }
+  .contacto-item.vacio .izq { color: var(--text-muted); }
+  .contacto-item a.abrir { font-size: 12px; flex-shrink: 0; }
+
+  .acciones-panel { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+  .acciones-panel .btn { justify-content: center; width: 100%; }
+
+  .tabs {
+    display: flex; gap: 4px; border-bottom: 1px solid var(--border);
+    margin-bottom: 20px; overflow-x: auto;
+  }
+  .tab {
+    padding: 10px 16px; font-size: 14px; color: var(--text-secondary);
+    border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
+    background: none; border-radius: 0; border-top: none; border-left: none; border-right: none;
+  }
+  .tab.activo { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+  .tab-panel.oculto { display: none !important; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .score-card { display: flex; gap: 20px; align-items: center; margin-bottom: 4px; }
+  .score-circulo {
+    flex-shrink: 0; width: 90px; height: 90px; border-radius: 50%;
+    border: 6px solid var(--accent); display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .score-circulo .num { font-size: 24px; font-weight: 700; line-height: 1; }
+  .score-circulo .den { font-size: 10px; color: var(--text-muted); }
+
+  .score-barras { flex: 1; }
+  .barra-fila { margin-bottom: 10px; }
+  .barra-fila:last-child { margin-bottom: 0; }
+  .barra-fila .barra-label {
+    display: flex; justify-content: space-between; font-size: 12px;
+    color: var(--text-secondary); margin-bottom: 4px;
+  }
+  .barra-track { height: 5px; background: var(--bg-card-alt); border-radius: 4px; overflow: hidden; }
+  .barra-fill { height: 100%; background: var(--accent); border-radius: 4px; }
+
+  .hallazgo {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border);
+  }
+  .hallazgo:last-child { border-bottom: none; }
 </style>
 </head>
 <body>
 
 <div id="nav-top"></div>
 
-<div class="container" style="padding-top: 24px;">
+<div class="container" style="padding-top: 24px; max-width: 1080px; padding-bottom: 40px;">
+
   <div class="flex-between" style="margin-bottom: 4px;">
-    <h1>Comercios</h1>
-    <a href="nuevo.html" class="btn btn-primary">+ Nuevo comercio</a>
+    <h1 id="tituloComercio">Cargando...</h1>
+    <a href="index.html">← volver</a>
   </div>
-  <p class="muted">Todos los comercios relevados hasta ahora.</p>
+  <p class="muted" id="subtituloComercio" style="margin-bottom: 16px;"></p>
 
-  <div class="stats-header">
-    <div class="stat-card">
-      <p class="stat-label">Total comercios</p>
-      <p class="stat-valor" id="statTotal">—</p>
-    </div>
-    <div class="stat-card">
-      <p class="stat-label">Clientes activos</p>
-      <p class="stat-valor" id="statActivos">—</p>
-    </div>
-    <div class="stat-card">
-      <p class="stat-label">Prioridad alta</p>
-      <p class="stat-valor" id="statPrioridad">—</p>
-    </div>
-    <div class="stat-card">
-      <p class="stat-label">Sin contactar</p>
-      <p class="stat-valor" id="statNuevos">—</p>
+  <div class="mensaje-error" id="msgError"></div>
+
+  <!-- ============ MODO VISTA ============ -->
+  <div id="modoVista">
+    <div class="layout-vista">
+
+      <div class="card panel-comercio">
+        <div class="foto-comercio" id="fotoComercioVista">
+          <span class="sin-foto">Sin foto</span>
+        </div>
+
+        <div class="nombre-comercio" id="vistaNombre">—</div>
+
+        <div class="estrellas" id="vistaEstrellas"></div>
+        <div class="estrellas-label" id="vistaEstrellasLabel"></div>
+
+        <div class="dato-linea"><span class="icono">🏷️</span> <span id="vistaRubro">—</span></div>
+        <div class="dato-linea"><span class="icono">📍</span> <span id="vistaDireccion">No registrada</span></div>
+
+        <div class="badges-fila">
+          <span class="badge badge-cliente badge-punto" id="badgeEstadoComercial">Nuevo</span>
+          <span class="badge badge-punto" id="badgeEstadoServicio">—</span>
+        </div>
+
+        <hr class="divisor-vista">
+
+        <div id="listaContactoVista"></div>
+
+        <div class="acciones-panel">
+          <button type="button" class="btn btn-primary" id="btnEditar">✏️ Editar información</button>
+          <button type="button" class="btn" id="btnIrInspeccionVista">Nueva inspección</button>
+          <button type="button" class="btn" id="btnIrAuditoriaVista">Nueva auditoría</button>
+          <a class="btn" id="btnIrSeguimientoVista" href="#" style="text-decoration:none; text-align:center;">Agregar seguimiento</a>
+        </div>
+      </div>
+
+      <div>
+        <div class="tabs">
+          <div class="tab activo" data-tab="resumen">Resumen</div>
+          <div class="tab" data-tab="inspecciones">Inspecciones</div>
+          <div class="tab" data-tab="auditorias">Auditorías</div>
+          <div class="tab" data-tab="archivos">Archivos</div>
+        </div>
+
+        <!-- TAB: Resumen -->
+        <div class="tab-panel" data-tab-panel="resumen">
+          <div class="grid-2" style="margin-bottom: 16px;">
+            <div class="card">
+              <h3 style="margin-bottom: 14px;">Eleva Score</h3>
+              <div id="contenidoEleveScore"><p class="muted">Cargando...</p></div>
+            </div>
+            <div class="card">
+              <h3 style="margin-bottom: 12px;">Última inspección</h3>
+              <div id="contenidoUltimaInspeccion"><p class="muted">Cargando...</p></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="flex-between" style="margin-bottom: 10px;">
+              <h3 style="margin-bottom:0;">Notas internas</h3>
+            </div>
+            <p style="font-size: 13px; color: var(--text-secondary);" id="vistaObservaciones">Sin notas cargadas.</p>
+          </div>
+        </div>
+
+        <!-- TAB: Inspecciones -->
+        <div class="tab-panel oculto" data-tab-panel="inspecciones">
+          <div class="card">
+            <div class="flex-between" style="margin-bottom: 8px;">
+              <h3 style="margin-bottom:0;">Inspecciones Iniciales</h3>
+              <button type="button" class="btn btn-primary" id="btnIniciarInspeccion">Inspección Inicial</button>
+            </div>
+            <p class="muted" style="margin-bottom: 10px;">Evaluación rápida (2 a 5 min). No reemplaza la Auditoría completa.</p>
+            <div id="listaInspecciones"><p class="muted">Cargando...</p></div>
+          </div>
+        </div>
+
+        <!-- TAB: Auditorías -->
+        <div class="tab-panel oculto" data-tab-panel="auditorias">
+          <div class="card">
+            <div class="flex-between" style="margin-bottom: 8px;">
+              <h3 style="margin-bottom:0;">Auditorías</h3>
+              <button type="button" class="btn btn-primary" id="btnIniciarAuditoria">+ Iniciar nueva auditoría</button>
+            </div>
+            <p class="muted" style="margin-bottom: 10px;">Historial de evaluaciones digitales de este comercio.</p>
+            <div id="listaAuditorias"><p class="muted">Cargando...</p></div>
+          </div>
+        </div>
+
+        <!-- TAB: Archivos (por ahora, solo fotos) -->
+        <div class="tab-panel oculto" data-tab-panel="archivos">
+          <div class="card">
+            <h3 style="margin-bottom: 12px;">Archivos</h3>
+            <p class="muted" style="margin-bottom: 10px;">Por ahora solo fotos. Más adelante también van a poder subirse otros archivos acá.</p>
+            <div class="subida-foto">
+              <input type="file" id="inputFotoVista" accept="image/*" hidden>
+              <button type="button" class="btn" id="btnElegirFoto">📷 Elegir foto</button>
+              <span id="nombreFotoElegida" class="muted"></span>
+              <button type="button" class="btn btn-primary oculto" id="btnSubirFoto">Subir foto</button>
+              <span id="estadoSubidaFoto" class="muted"></span>
+            </div>
+            <div class="fotos-grid" id="fotosGridVista"></div>
+
+            <div class="seccion">
+              <h3>Otros archivos</h3>
+              <p class="muted" style="margin-bottom: 10px;">PDFs, Word, y cualquier otro documento del comercio (no se usan como portada).</p>
+              <div class="subida-foto">
+                <input type="file" id="inputArchivoVista" hidden>
+                <button type="button" class="btn" id="btnElegirArchivo">📎 Elegir archivo</button>
+                <span id="nombreArchivoElegido" class="muted"></span>
+                <button type="button" class="btn btn-primary oculto" id="btnSubirArchivo">Subir archivo</button>
+                <span id="estadoSubidaArchivo" class="muted"></span>
+              </div>
+              <div id="listaArchivosVista" class="lista-archivos"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="filtros-barra">
-    <input type="text" id="buscador" placeholder="Buscar por nombre o rubro...">
-        <select id="filtroEstado">
-      <option value="">Estado</option>
-      <option value="Nuevo">Nuevo</option>
-      <option value="Contactado">Contactado</option>
-      <option value="En seguimiento">En seguimiento</option>
-      <option value="Cliente">Cliente</option>
-      <option value="Descartado">Descartado</option>
-    </select>
-    <select id="filtroPrioridad">
-      <option value="">Prioridad</option>
-      <option value="Alta">Alta</option>
-      <option value="Media">Media</option>
-      <option value="Baja">Baja</option>
-    </select>
-    <select id="filtroRubro">
-      <option value="">Rubro</option>
-    </select>
-    <select id="filtroLocalidad">
-      <option value="">Localidad</option>
-    </select>
-    <select id="filtroOrden">
-      <option value="">Ordenar por</option>
-      <option value="recientes">Más recientes</option>
-      <option value="nombre">Nombre (A-Z)</option>
-      <option value="prioridad">Prioridad</option>
-    </select>
+  <!-- ============ MODO EDICIÓN (form original, intacto) ============ -->
+  <div id="modoEdicion" class="oculto">
+
+    <div class="flex-between" style="margin-bottom: 12px;">
+      <h2 style="margin-bottom:0; font-size: 16px;">Editando comercio</h2>
+      <button type="button" class="btn" id="btnCancelarEdicion">Cancelar</button>
+    </div>
+
+    <form id="formFicha">
+
+      <div class="card seccion">
+        <h3>Datos generales</h3>
+        <div class="form-grid">
+          <div class="campo"><label>Nombre *</label><input type="text" id="nombre" required></div>
+          <div class="campo"><label>Rubro *</label><input type="text" id="rubro" required></div>
+          <div class="campo"><label>Dirección</label><input type="text" id="direccion"></div>
+          <div class="campo">
+            <label>Teléfono</label>
+            <div class="campo-con-link">
+              <input type="text" id="telefono">
+              <a href="#" id="enlace-telefono" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Llamar">↗</a>
+            </div>
+          </div>
+          <div class="campo">
+            <label>WhatsApp</label>
+            <div class="campo-con-link">
+              <input type="text" id="whatsapp">
+              <a href="#" id="enlace-whatsapp" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir WhatsApp">↗</a>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Instagram</label>
+            <div class="campo-con-link">
+              <input type="text" id="instagram">
+              <a href="#" id="enlace-instagram" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir Instagram">↗</a>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Facebook</label>
+            <div class="campo-con-link">
+              <input type="text" id="facebook">
+              <a href="#" id="enlace-facebook" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir Facebook">↗</a>
+            </div>
+          </div>
+          <div class="campo">
+            <label>Sitio web</label>
+            <div class="campo-con-link">
+              <input type="text" id="sitioweb">
+              <a href="#" id="enlace-sitioweb" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir sitio web">↗</a>
+            </div>
+          </div>
+          <div class="campo" style="grid-column:1/-1;">
+            <label>Google Maps (link)</label>
+            <div class="campo-con-link">
+              <input type="text" id="maps">
+              <a href="#" id="enlace-maps" class="link-abrir" target="_blank" rel="noopener" style="display:none;" title="Abrir en Google Maps">↗</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card seccion">
+        <h3>Oportunidades y seguimiento</h3>
+        <div class="campo"><label>Observaciones</label><textarea id="observaciones" rows="2"></textarea></div>
+        <div class="campo"><label>Problemas encontrados</label><textarea id="problemas" rows="2"></textarea></div>
+        <div class="campo"><label>Servicios sugeridos</label><textarea id="servicios" rows="2"></textarea></div>
+
+        <div class="form-grid">
+          <div class="campo">
+            <label>Prioridad</label>
+            <select id="prioridad">
+              <option value="">Sin definir</option>
+              <option value="Alta">Alta</option>
+              <option value="Media">Media</option>
+              <option value="Baja">Baja</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Estado comercial</label>
+            <select id="estado">
+              <option value="Nuevo">Nuevo</option>
+              <option value="Contactado">Contactado</option>
+              <option value="En seguimiento">En seguimiento</option>
+              <option value="Cliente">Cliente</option>
+              <option value="Descartado">Descartado</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Estado del servicio</label>
+            <select id="estadoServicio">
+              <option value="">— (solo aplica a Clientes)</option>
+              <option value="Activo">Activo</option>
+              <option value="Pausado">Pausado</option>
+              <option value="Finalizado">Finalizado</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-sm" style="margin-top: 20px;">
+        <button type="submit" class="btn-primary" id="btnGuardar">Guardar cambios</button>
+      </div>
+    </form>
   </div>
 
-  <div id="listaComercios" class="grid-comercios">
-    <p class="muted">Cargando...</p>
-  </div>
 </div>
 
 <div id="nav-bottom"></div>
@@ -214,10 +427,11 @@
 <script src="../assets/js/api.js"></script>
 <script src="../assets/js/auth.js"></script>
 <script src="../assets/js/nav.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
   requireAuth('../index.html');
   renderNav('comercios', '../');
 </script>
-<script src="comercios.js"></script>
+<script src="ficha.js"></script>
 </body>
 </html>
