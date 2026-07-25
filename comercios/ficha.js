@@ -1021,14 +1021,53 @@ async function generarPDFInspeccion(idInspeccion) {
   dibujarChipPDF(doc, 105, y, 'Prioridad Comercial', prioridad, colorPrioridad);
   y += 26;
 
-  y = dibujarListaPDF(doc, 'Problemas detectados', detalle.problemasDetectados, y, COLOR_DANGER_PDF,
-    '¡Sin problemas detectados en esta inspección!');
-  y += 4;
-  y = dibujarListaPDF(doc, 'Servicios sugeridos', detalle.serviciosSugeridos, y, COLOR_SUCCESS_PDF,
-    'No se sugirió ningún servicio puntual.');
+  const sinProblemas = !Array.isArray(detalle.problemasDetectados) || detalle.problemasDetectados.length === 0;
+  const sinServicios = !Array.isArray(detalle.serviciosSugeridos) || detalle.serviciosSugeridos.length === 0;
+
+  if (sinProblemas && sinServicios) {
+    y = dibujarPanelSinHallazgos(doc, y);
+  } else {
+    y = dibujarListaPDF(doc, 'Problemas detectados', detalle.problemasDetectados, y, COLOR_DANGER_PDF,
+      '¡Sin problemas detectados en esta inspección!');
+    y += 4;
+    y = dibujarListaPDF(doc, 'Servicios sugeridos', detalle.serviciosSugeridos, y, COLOR_SUCCESS_PDF,
+      'No se sugirió ningún servicio puntual.');
+  }
 
   dibujarPiePDF(doc);
   doc.save(nombreArchivoPDF('Inspeccion', detalle.fecha));
+}
+
+const COLOR_SUCCESS_SOFT_PDF = [225, 245, 238];
+
+function dibujarPanelSinHallazgos(doc, y) {
+  const anchoPagina = doc.internal.pageSize.getWidth();
+  const anchoCaja = anchoPagina - 30;
+  const altoCaja = 28;
+
+  doc.setFillColor(...COLOR_SUCCESS_SOFT_PDF);
+  doc.roundedRect(15, y, anchoCaja, altoCaja, 3, 3, 'F');
+
+  // Círculo + tilde dibujados a mano (más confiable que un emoji en jsPDF)
+  const cx = 27, cy = y + altoCaja / 2;
+  doc.setFillColor(...COLOR_SUCCESS_PDF);
+  doc.circle(cx, cy, 5, 'F');
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(1.1);
+  doc.line(cx - 2.3, cy, cx - 0.5, cy + 2.2);
+  doc.line(cx - 0.5, cy + 2.2, cx + 2.8, cy - 2.6);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...COLOR_SUCCESS_PDF);
+  doc.text('Sin hallazgos en esta inspección', 38, y + 12);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(...COLOR_TEXT_PDF);
+  doc.text('No se detectaron problemas ni se sugirieron servicios adicionales.', 38, y + 19);
+
+  return y + altoCaja + 10;
 }
 
 // ─────────────────────────────────────────────
