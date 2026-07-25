@@ -658,7 +658,8 @@ function pintarInspeccionesTab(lista) {
       try {
         await generarPDFInspeccion(btn.dataset.id);
       } catch (err) {
-        alert('No se pudo generar el PDF. Probá de nuevo.');
+        console.error('Error generando PDF de inspección:', err);
+        alert('No se pudo generar el PDF: ' + (err && err.message ? err.message : err));
       }
       btn.disabled = false;
     });
@@ -744,7 +745,8 @@ function pintarAuditoriasTab(lista) {
       try {
         await generarPDFAuditoria(auditoria);
       } catch (err) {
-        alert('No se pudo generar el PDF. Probá de nuevo.');
+        console.error('Error generando PDF de auditoría:', err);
+        alert('No se pudo generar el PDF: ' + (err && err.message ? err.message : err));
       }
       btn.disabled = false;
     });
@@ -883,6 +885,9 @@ function dibujarPiePDF(doc) {
 }
 
 async function generarPDFAuditoria(auditoria) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    throw new Error('No se cargó la librería para generar PDFs (jsPDF). Recargá la página (Ctrl+F5) y probá de nuevo; si sigue, puede haber un bloqueador de contenido activo en el navegador.');
+  }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
@@ -993,6 +998,9 @@ async function generarPDFInspeccion(idInspeccion) {
     return;
   }
 
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    throw new Error('No se cargó la librería para generar PDFs (jsPDF). Recargá la página (Ctrl+F5) y probá de nuevo; si sigue, puede haber un bloqueador de contenido activo en el navegador.');
+  }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
