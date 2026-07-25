@@ -645,9 +645,24 @@ function pintarInspeccionesTab(lista) {
             <span class="badge ${badgeClaseInspeccion(i.estado)}">${i.estado}</span>
           </div>
         </a>
+        ${i.estado === 'Finalizada' ? `<button type="button" class="btnDescargarPDF" data-id="${i.id}" title="Descargar PDF">📄</button>` : ''}
         ${puedeEliminar ? `<button type="button" class="btnEliminarInspeccion" data-id="${i.id}" title="Eliminar inspección">✕</button>` : ''}
       </div>`;
   }).join('');
+
+  document.querySelectorAll('#listaInspecciones .btnDescargarPDF').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      btn.disabled = true;
+      try {
+        await generarPDFInspeccion(btn.dataset.id);
+      } catch (err) {
+        alert('No se pudo generar el PDF. Probá de nuevo.');
+      }
+      btn.disabled = false;
+    });
+  });
 
   document.querySelectorAll('.btnEliminarInspeccion').forEach(btn => {
     btn.addEventListener('click', async (e) => {
@@ -714,9 +729,26 @@ function pintarAuditoriasTab(lista) {
           <span class="badge ${badgeClaseAuditoria(a['Estado'])}">${a['Estado']}</span>
         </div>
       </a>
+      ${a['Estado'] === 'Finalizada' ? `<button type="button" class="btnDescargarPDF" data-id="${a['ID Auditoria']}" title="Descargar PDF">📄</button>` : ''}
       <button type="button" class="btnEliminarAuditoria" data-id="${a['ID Auditoria']}" title="Eliminar auditoría">✕</button>
     </div>
   `).join('');
+
+  document.querySelectorAll('#listaAuditorias .btnDescargarPDF').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const auditoria = auditoriasActuales.find(x => x['ID Auditoria'] === btn.dataset.id);
+      if (!auditoria) return;
+      btn.disabled = true;
+      try {
+        await generarPDFAuditoria(auditoria);
+      } catch (err) {
+        alert('No se pudo generar el PDF. Probá de nuevo.');
+      }
+      btn.disabled = false;
+    });
+  });
 
   document.querySelectorAll('.btnEliminarAuditoria').forEach(btn => {
     btn.addEventListener('click', async (e) => {
@@ -755,6 +787,241 @@ async function iniciarAuditoria() {
 
 document.getElementById('btnIniciarAuditoria').addEventListener('click', iniciarAuditoria);
 document.getElementById('btnIrAuditoriaVista').addEventListener('click', iniciarAuditoria);
+
+// ─────────────────────────────────────────────
+// EXPORTACIÓN A PDF (Auditoría / Inspección)
+// 100% client-side con jsPDF, sin tocar backend. Reutiliza AREAS_SCORE,
+// comercioActual y formatFecha ya existentes. Paleta de colores idéntica
+// a la usada en auditoria/index.html e inspeccion/index.html.
+// ─────────────────────────────────────────────
+
+const COLORES_AREA_PDF = {
+  Google: [232, 178, 61],
+  Web: [75, 142, 240],
+  WhatsApp: [62, 207, 142],
+  Redes: [167, 139, 250],
+  Catalogo: [240, 149, 75],
+  Branding: [240, 107, 168]
+};
+
+const COLOR_ACCENT_PDF = [75, 110, 240];
+const COLOR_TEXT_PDF = [26, 27, 35];
+const COLOR_MUTED_PDF = [110, 112, 125];
+const COLOR_DANGER_PDF = [216, 90, 48];
+const COLOR_SUCCESS_PDF = [29, 158, 117];
+const COLOR_WARNING_PDF = [186, 117, 23];
+
+let LOGO_BASE64_CACHE = null;
+
+async function obtenerLogoBase64() {
+  if (LOGO_BASE64_CACHE) return LOGO_BASE64_CACHE;
+  try {
+    const resp = await fetch('../assets/img/logo.png');
+    const blob = await resp.blob();
+    LOGO_BASE64_CACHE = await new Promise((resolve, reject) => {
+      const lector = new FileReader();
+      lector.onload = () => resolve(lector.result);
+      lector.onerror = reject;
+      lector.readAsDataURL(blob);
+    });
+  } catch (err) {
+    LOGO_BASE64_CACHE = null;
+  }
+  return LOGO_BASE64_CACHE;
+}
+
+function nombreArchivoPDF(prefijo, fecha) {
+  const nombreComercio = (comercioActual && comercioActual.Nombre || 'comercio')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_');
+  const fechaLimpia = formatFecha(fecha).replace(/\//g, '-');
+  return `${prefijo}_${nombreComercio}_${fechaLimpia}.pdf`;
+}
+
+async function dibujarMembrete(doc, subtitulo) {
+  const logo = await obtenerLogoBase64();
+  const anchoPagina = doc.internal.pageSize.getWidth();
+  const xTexto = logo ? 36 : 15;
+
+  if (logo) {
+    try { doc.addImage(logo, 'PNG', 15, 12, 16, 16); } catch (err) { /* logo opcional */ }
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(...COLOR_TEXT_PDF);
+  doc.text('Eleva Lab', xTexto, 20);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(...COLOR_MUTED_PDF);
+  doc.text(subtitulo, xTexto, 27);
+
+  doc.setDrawColor(...COLOR_ACCENT_PDF);
+  doc.setLineWidth(1);
+  doc.line(15, 34, anchoPagina - 15, 34);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(...COLOR_TEXT_PDF);
+  doc.text((comercioActual && comercioActual.Nombre) || 'Comercio sin nombre', 15, 44);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...COLOR_MUTED_PDF);
+  doc.text((comercioActual && comercioActual.Rubro) || '', 15, 50);
+
+  return 60; // próxima Y libre para el contenido
+}
+
+function dibujarPiePDF(doc) {
+  const alturaPagina = doc.internal.pageSize.getHeight();
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...COLOR_MUTED_PDF);
+  doc.text(`Generado por Eleva Lab · ${new Date().toLocaleDateString('es-AR')}`, 15, alturaPagina - 10);
+}
+
+async function generarPDFAuditoria(auditoria) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  let y = await dibujarMembrete(doc, 'Informe de Auditoría Digital');
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...COLOR_MUTED_PDF);
+  doc.text(`Fecha de la auditoría: ${formatFecha(auditoria['Fecha'])}`, 15, y);
+  y += 12;
+
+  const scoreGeneral = auditoria['Score General'];
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(30);
+  doc.setTextColor(...COLOR_ACCENT_PDF);
+  doc.text(String(scoreGeneral !== '' && scoreGeneral !== undefined ? scoreGeneral : '-'), 15, y + 12);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...COLOR_MUTED_PDF);
+  doc.text('Eleva Score general (sobre 100)', 15, y + 19);
+  y += 32;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...COLOR_TEXT_PDF);
+  doc.text('Resultado por área', 15, y);
+  y += 9;
+
+  const anchoBarraMax = 115;
+  AREAS_SCORE.forEach(area => {
+    const valor = auditoria['Score ' + area.clave];
+    const num = (valor === '' || valor === undefined || valor === null) ? 0 : Number(valor);
+    const color = COLORES_AREA_PDF[area.clave] || COLOR_ACCENT_PDF;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...COLOR_TEXT_PDF);
+    doc.text(area.label, 15, y + 4);
+
+    doc.setFillColor(230, 230, 235);
+    doc.roundedRect(55, y, anchoBarraMax, 5, 1.5, 1.5, 'F');
+
+    if (num > 0) {
+      doc.setFillColor(...color);
+      doc.roundedRect(55, y, anchoBarraMax * (Math.min(num, 100) / 100), 5, 1.5, 1.5, 'F');
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...COLOR_TEXT_PDF);
+    doc.text(String(valor === '' || valor === undefined ? '—' : num), 55 + anchoBarraMax + 6, y + 4.5);
+
+    y += 12;
+  });
+
+  dibujarPiePDF(doc);
+  doc.save(nombreArchivoPDF('Auditoria', auditoria['Fecha']));
+}
+
+function dibujarChipPDF(doc, x, y, etiqueta, valor, color) {
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...COLOR_MUTED_PDF);
+  doc.text(etiqueta, x, y);
+
+  doc.setFillColor(...color);
+  doc.roundedRect(x, y + 3, 75, 10, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(255, 255, 255);
+  doc.text(String(valor), x + 5, y + 10);
+}
+
+function dibujarListaPDF(doc, titulo, items, y, colorPunto, textoVacio) {
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...COLOR_TEXT_PDF);
+  doc.text(titulo, 15, y);
+  y += 8;
+
+  const lista = Array.isArray(items) ? items : [];
+  if (lista.length === 0) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...COLOR_MUTED_PDF);
+    doc.text(textoVacio, 15, y);
+    return y + 10;
+  }
+
+  doc.setFontSize(10);
+  lista.forEach(item => {
+    if (y > 270) { doc.addPage(); y = 20; }
+    doc.setFillColor(...colorPunto);
+    doc.circle(17, y - 1.3, 1.1, 'F');
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...COLOR_TEXT_PDF);
+    const lineas = doc.splitTextToSize(String(item), 172);
+    doc.text(lineas, 22, y);
+    y += 6 * lineas.length;
+  });
+
+  return y + 6;
+}
+
+async function generarPDFInspeccion(idInspeccion) {
+  const detalle = await apiGet('getInspeccion', { id: idInspeccion });
+  if (!detalle) {
+    alert('No se pudo obtener el detalle de la inspección.');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  let y = await dibujarMembrete(doc, 'Informe de Inspección Inicial');
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...COLOR_MUTED_PDF);
+  doc.text(`Fecha de la inspección: ${formatFecha(detalle.fecha)}`, 15, y);
+  y += 14;
+
+  const nivel = detalle.nivelOportunidad || '-';
+  const prioridad = detalle.prioridadComercial || '-';
+  const colorPrioridad = prioridad === 'Alta' ? COLOR_DANGER_PDF
+    : (prioridad === 'Media' ? COLOR_WARNING_PDF : COLOR_WARNING_PDF);
+
+  dibujarChipPDF(doc, 15, y, 'Nivel de Oportunidad', nivel, COLOR_ACCENT_PDF);
+  dibujarChipPDF(doc, 105, y, 'Prioridad Comercial', prioridad, colorPrioridad);
+  y += 26;
+
+  y = dibujarListaPDF(doc, 'Problemas detectados', detalle.problemasDetectados, y, COLOR_DANGER_PDF,
+    '¡Sin problemas detectados en esta inspección!');
+  y += 4;
+  y = dibujarListaPDF(doc, 'Servicios sugeridos', detalle.serviciosSugeridos, y, COLOR_SUCCESS_PDF,
+    'No se sugirió ningún servicio puntual.');
+
+  dibujarPiePDF(doc);
+  doc.save(nombreArchivoPDF('Inspeccion', detalle.fecha));
+}
 
 // ─────────────────────────────────────────────
 // SEGUIMIENTO — por ahora solo linkea al módulo existente (todavía no
