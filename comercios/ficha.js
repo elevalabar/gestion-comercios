@@ -633,7 +633,6 @@ function pintarInspeccionesTab(lista) {
     const href = i.estado === 'Finalizada'
       ? `../inspeccion/resultado.html?id=${encodeURIComponent(i.id)}`
       : `../inspeccion/index.html?id=${encodeURIComponent(i.id)}`;
-    const puedeEliminar = i.estado !== 'Finalizada';
     return `
       <div class="fila-auditoria">
         <a href="${href}">
@@ -646,7 +645,7 @@ function pintarInspeccionesTab(lista) {
           </div>
         </a>
         ${i.estado === 'Finalizada' ? `<button type="button" class="btnDescargarPDF" data-id="${i.id}" title="Descargar PDF">📄</button>` : ''}
-        ${puedeEliminar ? `<button type="button" class="btnEliminarInspeccion" data-id="${i.id}" title="Eliminar inspección">✕</button>` : ''}
+        <button type="button" class="btnEliminarInspeccion" data-id="${i.id}" data-estado="${i.estado}" title="Eliminar inspección">✕</button>
       </div>`;
   }).join('');
 
@@ -669,7 +668,11 @@ function pintarInspeccionesTab(lista) {
     btn.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!confirm('¿Eliminar esta inspección? Esta acción no se puede deshacer.')) return;
+      if (btn.dataset.estado === 'Finalizada') {
+        if (!confirm('Esta inspección ya está FINALIZADA. Si la eliminás se pierden el puntaje, los problemas detectados y los servicios sugeridos, y no se puede deshacer. ¿Eliminarla igual?')) return;
+      } else {
+        if (!confirm('¿Eliminar esta inspección? Esta acción no se puede deshacer.')) return;
+      }
       btn.disabled = true;
       try {
         const res = await apiPost('eliminarInspeccion', { idInspeccion: btn.dataset.id });
