@@ -209,6 +209,7 @@ document.getElementById('btnGenerar').addEventListener('click', async () => {
     console.log('RESPUESTAS QUE SE MANDAN:', RESPUESTAS);
     const res = await apiPost('finalizarInspeccion', { idInspeccion: ID_INSPECCION });
     console.log('RESULTADO DE finalizarInspeccion:', res);
+    alert('RESULTADO:\n' + JSON.stringify(res, null, 2));
     if (res.ok) {
       window.location.href = `resultado.html?id=${encodeURIComponent(ID_INSPECCION)}`;
     } else {
