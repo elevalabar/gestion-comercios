@@ -206,7 +206,9 @@ document.getElementById('btnGenerar').addEventListener('click', async () => {
   btn.textContent = 'Generando análisis...';
 
   try {
+    console.log('RESPUESTAS QUE SE MANDAN:', RESPUESTAS);
     const res = await apiPost('finalizarInspeccion', { idInspeccion: ID_INSPECCION });
+    console.log('RESULTADO DE finalizarInspeccion:', res);
     if (res.ok) {
       window.location.href = `resultado.html?id=${encodeURIComponent(ID_INSPECCION)}`;
     } else {
