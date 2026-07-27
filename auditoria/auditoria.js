@@ -8,6 +8,16 @@
 // un único template string gigante, cada pieza tiene su propia función
 // (renderHeader/renderArea/renderPregunta) para que sea más fácil de
 // tocar a futuro.
+//
+// Categoría + condicionalidad (jul 2026): getPreguntas ahora filtra por
+// Categoria del comercio (no por Rubro, que es texto libre). Además,
+// una pregunta con "Condicional De" cargado solo se muestra —y solo
+// cuenta para el progreso y para "Finalizar"— si la pregunta de la que
+// depende ya fue respondida con el valor esperado (esPreguntaAplicable,
+// en assets/js/condicional.js, espejo del mismo chequeo que hace el
+// backend al calcular el score). Si no hay ninguna columna cargada
+// todavía, esPreguntaAplicable siempre da true y el comportamiento es
+// idéntico al de antes.
 // ─────────────────────────────────────────────
 
 const ICONOS_AREA = {
@@ -62,9 +72,20 @@ async function init() {
   const comercio = await apiGet('getComercio', { id: ID_COMERCIO });
   renderHeader(comercio);
 
-  PREGUNTAS = await apiGet('getPreguntas', { rubro: comercio ? comercio.Rubro : '' });
+  PREGUNTAS = await apiGet('getPreguntas', { idCategoria: comercio ? (comercio.Categoria || '') : '' });
   pintarPreguntas();
   actualizarAvance();
+}
+
+// ─────────────────────────────────────────────
+// CONDICIONALIDAD
+// ─────────────────────────────────────────────
+
+// Subconjunto de una lista de preguntas que aplica según las respuestas
+// actuales — esto es lo que hay que mostrar, contar y exigir en cada
+// momento (no PREGUNTAS completo).
+function soloAplicables(lista) {
+  return lista.filter(p => esPreguntaAplicable(p['Condicional De'], p['Condicional Valor Opcion'], RESPUESTAS));
 }
 
 // ─────────────────────────────────────────────
@@ -107,9 +128,15 @@ function renderArea(area, preguntas) {
   `;
 }
 
+// Se vuelve a llamar completa cada vez que cambia una respuesta (no solo
+// al cargar la página): una pregunta puerta puede hacer aparecer o
+// desaparecer sus dependientes, así que hay que rearmar qué áreas y qué
+// preguntas corresponde mostrar en ese momento.
 function pintarPreguntas() {
+  const aplicables = soloAplicables(PREGUNTAS);
+
   const porArea = {};
-  PREGUNTAS.forEach(p => {
+  aplicables.forEach(p => {
     const area = p['Area'];
     if (!porArea[area]) porArea[area] = [];
     porArea[area].push(p);
@@ -134,8 +161,7 @@ function pintarPreguntas() {
 
 async function onCambiarRespuesta(e) {
   const boton = e.currentTarget;
-  const fila = boton.closest('.pregunta-row');
-  const preguntaId = fila.dataset.preguntaId;
+  const preguntaId = boton.closest('.pregunta-row').dataset.preguntaId;
   const valorClickeado = boton.dataset.valor;
 
   // Click sobre el botón ya activo = deshacer la respuesta (vuelve a "sin
@@ -144,26 +170,27 @@ async function onCambiarRespuesta(e) {
   const respuesta = RESPUESTAS[preguntaId] === valorClickeado ? '' : valorClickeado;
   RESPUESTAS[preguntaId] = respuesta;
 
-  pintarEstadoPregunta(fila, respuesta);
+  // Repintar puede hacer aparecer/desaparecer preguntas dependientes de
+  // esta — se preserva el scroll para no desorientar al usuario en medio
+  // de una auditoría larga.
+  const scrollY = window.scrollY;
+  pintarPreguntas();
+  window.scrollTo(0, scrollY);
   actualizarAvance();
 
-  const botonesFila = fila.querySelectorAll('.seg-btn');
+  const fila = document.querySelector(`.pregunta-row[data-pregunta-id="${preguntaId}"]`);
+  const botonesFila = fila ? fila.querySelectorAll('.seg-btn') : [];
   botonesFila.forEach(b => b.disabled = true);
 
   try {
     await apiPost('guardarRespuesta', { idAuditoria: ID_AUDITORIA, idPregunta: preguntaId, respuesta });
-    mostrarGuardado(fila);
+    if (fila) mostrarGuardado(fila);
   } catch (err) {
     // el guardado falló pero dejamos el valor elegido en pantalla;
     // el usuario puede reintentar clickeando de nuevo
   } finally {
     botonesFila.forEach(b => b.disabled = false);
   }
-}
-
-function pintarEstadoPregunta(fila, respuesta) {
-  fila.querySelector('.seg-si').classList.toggle('activo', respuesta === 'Sí');
-  fila.querySelector('.seg-no').classList.toggle('activo', respuesta === 'No');
 }
 
 function mostrarGuardado(fila) {
@@ -178,17 +205,19 @@ function mostrarGuardado(fila) {
 // ─────────────────────────────────────────────
 
 function actualizarAvance() {
-  const total = PREGUNTAS.length;
-  const respondidas = PREGUNTAS.filter(p => RESPUESTAS[p['ID Pregunta']] === 'Sí' || RESPUESTAS[p['ID Pregunta']] === 'No').length;
+  const aplicables = soloAplicables(PREGUNTAS);
+  const total = aplicables.length;
+  const respondidas = aplicables.filter(p => RESPUESTAS[p['ID Pregunta']] === 'Sí' || RESPUESTAS[p['ID Pregunta']] === 'No').length;
   const pct = total > 0 ? Math.round((respondidas / total) * 100) : 0;
 
   document.getElementById('relleno').style.width = pct + '%';
   document.getElementById('textoAvance').textContent = `${respondidas} de ${total} respuestas`;
   document.getElementById('textoPorcentaje').textContent = `${pct}% completado`;
 
-  // Contador por área (header de cada card)
+  // Contador por área (header de cada card) — mismo criterio: solo
+  // preguntas aplicables en este momento.
   const porArea = {};
-  PREGUNTAS.forEach(p => {
+  aplicables.forEach(p => {
     const area = p['Area'];
     if (!porArea[area]) porArea[area] = [];
     porArea[area].push(p);
@@ -205,8 +234,9 @@ document.getElementById('btnFinalizar').addEventListener('click', async () => {
   const mensaje = document.getElementById('mensaje');
   mensaje.classList.remove('visible');
 
-  const total = PREGUNTAS.length;
-  const respondidas = PREGUNTAS.filter(p => RESPUESTAS[p['ID Pregunta']] === 'Sí' || RESPUESTAS[p['ID Pregunta']] === 'No').length;
+  const aplicables = soloAplicables(PREGUNTAS);
+  const total = aplicables.length;
+  const respondidas = aplicables.filter(p => RESPUESTAS[p['ID Pregunta']] === 'Sí' || RESPUESTAS[p['ID Pregunta']] === 'No').length;
 
   if (respondidas < total) {
     mensaje.textContent = `Todavía faltan ${total - respondidas} preguntas por responder.`;
