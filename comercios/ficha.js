@@ -24,6 +24,23 @@ const AREAS_SCORE = [
 let comercioActual = null;
 let auditoriasActuales = [];
 let inspeccionesActuales = [];
+let CATEGORIAS_CACHE = null; // { idCategoria: nombre }, se carga una sola vez
+
+async function nombreDeCategoria(idCategoria) {
+  if (!idCategoria) return '';
+  if (!CATEGORIAS_CACHE) {
+    CATEGORIAS_CACHE = {};
+    try {
+      const categorias = await apiGet('getCategorias');
+      if (Array.isArray(categorias)) {
+        categorias.forEach(c => { CATEGORIAS_CACHE[c['ID Categoria']] = c['Nombre']; });
+      }
+    } catch (err) {
+      // si falla, se muestra el ID tal cual en vez del nombre
+    }
+  }
+  return CATEGORIAS_CACHE[idCategoria] || idCategoria;
+}
 
 if (!ID_COMERCIO) {
   document.getElementById('tituloComercio').textContent = 'Comercio no especificado';
@@ -157,6 +174,13 @@ function pintarVista(c) {
   document.getElementById('vistaNombre').textContent = c.Nombre || 'Sin nombre';
   document.getElementById('vistaRubro').textContent = c.Rubro || 'Sin rubro';
   document.getElementById('vistaDireccion').textContent = c['Dirección'] || 'No registrada';
+
+  const vistaCategoria = document.getElementById('vistaCategoria');
+  if (c.Categoria) {
+    nombreDeCategoria(c.Categoria).then(nombre => { vistaCategoria.textContent = nombre; });
+  } else {
+    vistaCategoria.textContent = 'Sin categoría asignada';
+  }
 
   const badgeEstado = document.getElementById('badgeEstadoComercial');
   badgeEstado.textContent = c.Estado || 'Nuevo';
@@ -298,6 +322,7 @@ document.getElementById('btnCancelarEdicion').addEventListener('click', () => {
 function pintarFormulario(c) {
   document.getElementById('nombre').value = c.Nombre || '';
   document.getElementById('rubro').value = c.Rubro || '';
+  poblarSelectCategorias(document.getElementById('categoria'), c.Categoria || '');
   document.getElementById('direccion').value = c['Dirección'] || '';
   document.getElementById('telefono').value = c['Teléfono'] || '';
   document.getElementById('whatsapp').value = c.WhatsApp || '';
@@ -349,6 +374,7 @@ document.getElementById('formFicha').addEventListener('submit', async (e) => {
     'ID': ID_COMERCIO,
     'Nombre': document.getElementById('nombre').value.trim(),
     'Rubro': document.getElementById('rubro').value.trim(),
+    'Categoria': document.getElementById('categoria').value,
     'Dirección': document.getElementById('direccion').value.trim(),
     'Teléfono': document.getElementById('telefono').value.trim(),
     'WhatsApp': document.getElementById('whatsapp').value.trim(),
