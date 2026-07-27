@@ -53,6 +53,10 @@
         <input type="text" id="rubro" required placeholder="Ej: Panadería, Ferretería...">
       </div>
       <div class="campo">
+        <label for="categoria">Categoría</label>
+        <select id="categoria"></select>
+      </div>
+      <div class="campo">
         <label for="direccion">Dirección</label>
         <input type="text" id="direccion">
       </div>
@@ -106,6 +110,7 @@
 <script src="../assets/js/api.js"></script>
 <script src="../assets/js/auth.js"></script>
 <script src="../assets/js/nav.js"></script>
+<script src="../assets/js/categorias.js"></script>
 <script>
   requireAuth('../index.html');
   renderNav('comercios', '../');
