@@ -34,6 +34,7 @@ function leerComercioDelForm() {
   return {
     'Nombre': document.getElementById('nombre').value.trim(),
     'Rubro': document.getElementById('rubro').value.trim(),
+    'Categoria': document.getElementById('categoria').value,
     'Dirección': document.getElementById('direccion').value.trim(),
     'Teléfono': document.getElementById('telefono').value.trim(),
     'WhatsApp': document.getElementById('whatsapp').value.trim(),
@@ -43,6 +44,8 @@ function leerComercioDelForm() {
     'Google Maps': document.getElementById('maps').value.trim()
   };
 }
+
+poblarSelectCategorias(document.getElementById('categoria'), '');
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
