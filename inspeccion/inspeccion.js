@@ -12,6 +12,16 @@
 // un gradiente rojo→verde según su posición (Orden) — la peor opción
 // siempre roja, la mejor siempre verde, mismo lenguaje visual que
 // Auditoría adaptado a N opciones.
+//
+// Categoría + condicionalidad (jul 2026): getInspeccionConfig ahora
+// recibe idComercio y filtra el cuestionario por la Categoria del
+// comercio (antes era el mismo cuestionario global para todos). Además,
+// cada pregunta puede traer condicionalDe/condicionalValorOpcion — solo
+// se muestra, cuenta y exige si la pregunta de la que depende ya fue
+// respondida con el valor esperado (esPreguntaAplicable, en
+// assets/js/condicional.js, mismo criterio que usa el backend al
+// calcular el score). Sin nada cargado en esas columnas, el
+// comportamiento es idéntico al de antes.
 // ─────────────────────────────────────────────
 
 const ICONOS_BLOQUE = {
@@ -29,7 +39,6 @@ const ID_INSPECCION = params.get('id');
 let CONFIG = null;
 let ID_COMERCIO = null;
 let RESPUESTAS = {}; // { idPregunta: idOpcion }
-let TOTAL_PREGUNTAS = 0;
 
 if (!ID_INSPECCION) {
   document.getElementById('nombreComercio').textContent = 'Inspección no especificada';
@@ -55,15 +64,29 @@ async function init() {
   const comercio = await apiGet('getComercio', { id: ID_COMERCIO });
   document.getElementById('nombreComercio').textContent = comercio && comercio.Nombre ? comercio.Nombre : '';
 
-  CONFIG = await apiGet('getInspeccionConfig', {});
+  CONFIG = await apiGet('getInspeccionConfig', { idComercio: ID_COMERCIO });
   if (!CONFIG || !CONFIG.bloques) {
     document.getElementById('bloques').innerHTML = '<p class="muted">No se pudo cargar el cuestionario. Recargá la página para reintentar.</p>';
     return;
   }
 
-  TOTAL_PREGUNTAS = CONFIG.bloques.reduce((acc, b) => acc + b.preguntas.length, 0);
   pintarBloques();
   actualizarAvance();
+}
+
+// ─────────────────────────────────────────────
+// CONDICIONALIDAD
+// ─────────────────────────────────────────────
+
+// Todas las preguntas de CONFIG.bloques, en una sola lista plana.
+function todasLasPreguntas() {
+  return CONFIG ? CONFIG.bloques.flatMap(b => b.preguntas) : [];
+}
+
+// Subconjunto que aplica según las respuestas actuales — es lo que hay
+// que mostrar, contar y exigir en cada momento (no todasLasPreguntas()).
+function soloAplicables(lista) {
+  return lista.filter(p => esPreguntaAplicable(p.condicionalDe, p.condicionalValorOpcion, RESPUESTAS));
 }
 
 // ─────────────────────────────────────────────
@@ -100,25 +123,35 @@ function renderPregunta(p) {
   `;
 }
 
-function renderBloque(bloque) {
-  const respondidas = bloque.preguntas.filter(p => RESPUESTAS[p.id]).length;
+function renderBloque(nombreBloque, preguntas) {
+  const respondidas = preguntas.filter(p => RESPUESTAS[p.id]).length;
   return `
-    <div class="card bloque-card" data-bloque="${bloque.nombre}">
+    <div class="card bloque-card" data-bloque="${nombreBloque}">
       <div class="bloque-card-header">
-        <span class="bloque-icon">${ICONOS_BLOQUE[bloque.nombre] || '📋'}</span>
-        <h3>${bloque.nombre}</h3>
-        <span class="bloque-contador" data-bloque-contador="${bloque.nombre}">${respondidas}/${bloque.preguntas.length}</span>
+        <span class="bloque-icon">${ICONOS_BLOQUE[nombreBloque] || '📋'}</span>
+        <h3>${nombreBloque}</h3>
+        <span class="bloque-contador" data-bloque-contador="${nombreBloque}">${respondidas}/${preguntas.length}</span>
       </div>
       <div class="pregunta-list">
-        ${bloque.preguntas.map(renderPregunta).join('')}
+        ${preguntas.map(renderPregunta).join('')}
       </div>
     </div>
   `;
 }
 
+// Se vuelve a llamar completa cada vez que cambia una respuesta: una
+// pregunta puerta (¿Tiene sitio web? / ¿Tiene Instagram? / etc.) puede
+// hacer aparecer o desaparecer sus dependientes. Un bloque cuyas
+// preguntas queden todas no-aplicables directamente no se pinta (en la
+// práctica no debería pasar, porque la pregunta puerta de cada bloque no
+// depende de nada y siempre queda visible).
 function pintarBloques() {
   const contenedor = document.getElementById('bloques');
-  contenedor.innerHTML = CONFIG.bloques.map(renderBloque).join('');
+  contenedor.innerHTML = CONFIG.bloques
+    .map(bloque => ({ nombre: bloque.nombre, preguntas: soloAplicables(bloque.preguntas) }))
+    .filter(bloque => bloque.preguntas.length > 0)
+    .map(bloque => renderBloque(bloque.nombre, bloque.preguntas))
+    .join('');
 
   document.querySelectorAll('[data-opcion-id]').forEach(btn => {
     btn.addEventListener('click', onElegirOpcion);
@@ -131,28 +164,25 @@ function pintarBloques() {
 
 async function onElegirOpcion(e) {
   const boton = e.currentTarget;
-  const fila = boton.closest('.pregunta-row');
-  const idPregunta = fila.dataset.pregunta;
+  const idPregunta = boton.closest('.pregunta-row').dataset.pregunta;
   const idOpcion = boton.dataset.opcionId;
 
   RESPUESTAS[idPregunta] = idOpcion;
 
-  // Repinta solo los botones de esa pregunta (evita perder el scroll)
-  const botonesFila = fila.querySelectorAll('.opcion-btn');
-  const total = botonesFila.length;
-  botonesFila.forEach((b, idx) => {
-    const activa = b.dataset.opcionId === idOpcion;
-    b.classList.toggle('seleccionada', activa);
-    b.style.background = activa ? colorOpcion(idx, total) : '';
-    b.style.borderColor = activa ? colorOpcion(idx, total) : '';
-  });
-
+  // Repintar puede hacer aparecer/desaparecer preguntas dependientes de
+  // esta — se preserva el scroll para no desorientar al usuario.
+  const scrollY = window.scrollY;
+  pintarBloques();
+  window.scrollTo(0, scrollY);
   actualizarAvance();
+
+  const fila = document.querySelector(`.pregunta-row[data-pregunta="${idPregunta}"]`);
+  const botonesFila = fila ? fila.querySelectorAll('.opcion-btn') : [];
   botonesFila.forEach(b => b.disabled = true);
 
   try {
     await apiPost('guardarRespuestaInspeccion', { idInspeccion: ID_INSPECCION, idPregunta, idOpcion });
-    mostrarGuardado(fila);
+    if (fila) mostrarGuardado(fila);
   } catch (err) {
     // el guardado falló pero el valor queda elegido en pantalla; el usuario
     // puede reintentar tocando la opción de nuevo
@@ -173,19 +203,23 @@ function mostrarGuardado(fila) {
 // ─────────────────────────────────────────────
 
 function actualizarAvance() {
-  const respondidas = Object.keys(RESPUESTAS).filter(k => RESPUESTAS[k]).length;
-  const pct = TOTAL_PREGUNTAS > 0 ? Math.round((respondidas / TOTAL_PREGUNTAS) * 100) : 0;
+  if (!CONFIG) return;
+
+  const aplicables = soloAplicables(todasLasPreguntas());
+  const total = aplicables.length;
+  const respondidas = aplicables.filter(p => RESPUESTAS[p.id]).length;
+  const pct = total > 0 ? Math.round((respondidas / total) * 100) : 0;
 
   document.getElementById('relleno').style.width = pct + '%';
-  document.getElementById('textoAvance').textContent = `${respondidas} de ${TOTAL_PREGUNTAS} respondidas`;
+  document.getElementById('textoAvance').textContent = `${respondidas} de ${total} respondidas`;
   document.getElementById('textoPorcentaje').textContent = `${pct}% completado`;
 
-  if (!CONFIG) return;
   CONFIG.bloques.forEach(bloque => {
     const el = document.querySelector(`[data-bloque-contador="${bloque.nombre}"]`);
     if (!el) return;
-    const resp = bloque.preguntas.filter(p => RESPUESTAS[p.id]).length;
-    el.textContent = `${resp}/${bloque.preguntas.length}`;
+    const preguntasBloque = soloAplicables(bloque.preguntas);
+    const resp = preguntasBloque.filter(p => RESPUESTAS[p.id]).length;
+    el.textContent = `${resp}/${preguntasBloque.length}`;
   });
 }
 
@@ -193,9 +227,12 @@ document.getElementById('btnGenerar').addEventListener('click', async () => {
   const mensaje = document.getElementById('mensaje');
   mensaje.classList.remove('visible');
 
-  const respondidas = Object.keys(RESPUESTAS).filter(k => RESPUESTAS[k]).length;
-  if (respondidas < TOTAL_PREGUNTAS) {
-    mensaje.textContent = `Todavía faltan ${TOTAL_PREGUNTAS - respondidas} preguntas por responder.`;
+  const aplicables = soloAplicables(todasLasPreguntas());
+  const total = aplicables.length;
+  const respondidas = aplicables.filter(p => RESPUESTAS[p.id]).length;
+
+  if (respondidas < total) {
+    mensaje.textContent = `Todavía faltan ${total - respondidas} preguntas por responder.`;
     mensaje.classList.add('visible');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
