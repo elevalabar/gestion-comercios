@@ -221,15 +221,22 @@ async function pintarResumen(c, auditorias, inspecciones) {
     document.getElementById('vistaEstrellasLabel').textContent =
       (scoreGeneral !== '' ? `${estrellas.label} · Eleva Score ${scoreGeneral}` : estrellas.label);
 
-    const barras = AREAS_SCORE.map(area => {
-      const valor = auditoriaReciente['Score ' + area.clave];
-      const num = (valor === '' || valor === undefined) ? 0 : Number(valor);
-      return `
-        <div class="barra-fila">
-          <div class="barra-label"><span>${area.label}</span><span>${valor === '' || valor === undefined ? '—' : num}</span></div>
-          <div class="barra-track"><div class="barra-fill" style="width:${num}%;"></div></div>
-        </div>`;
-    }).join('');
+    // Mismo criterio que el PDF: solo se muestran las áreas que tuvieron
+    // preguntas aplicables para la categoría de este comercio.
+    const barras = AREAS_SCORE
+      .filter(area => {
+        const valor = auditoriaReciente['Score ' + area.clave];
+        return valor !== '' && valor !== undefined && valor !== null;
+      })
+      .map(area => {
+        const valor = auditoriaReciente['Score ' + area.clave];
+        const num = Number(valor);
+        return `
+          <div class="barra-fila">
+            <div class="barra-label"><span>${area.label}</span><span>${num}</span></div>
+            <div class="barra-track"><div class="barra-fill" style="width:${num}%;"></div></div>
+          </div>`;
+      }).join('');
 
     contEleve.innerHTML = `
       <div class="score-card">
@@ -902,6 +909,15 @@ async function dibujarMembrete(doc, subtitulo) {
   doc.setTextColor(...COLOR_MUTED_PDF);
   doc.text((comercioActual && comercioActual.Rubro) || '', 15, 50);
 
+  if (comercioActual && comercioActual.Categoria) {
+    const nombreCategoria = await nombreDeCategoria(comercioActual.Categoria);
+    if (nombreCategoria) {
+      doc.setFontSize(9);
+      doc.text(`Categoría: ${nombreCategoria}`, 15, 55);
+      return 65; // hay una línea más de membrete, empieza más abajo
+    }
+  }
+
   return 60; // próxima Y libre para el contenido
 }
 
@@ -946,9 +962,28 @@ async function generarPDFAuditoria(auditoria) {
   y += 9;
 
   const anchoBarraMax = 115;
-  AREAS_SCORE.forEach(area => {
+  // Solo se dibujan las áreas que tuvieron al menos una pregunta
+  // aplicable para la categoría de este comercio — finalizarAuditoria_
+  // devuelve '' (no 0) en un área sin preguntas aplicables, así que acá
+  // alcanza con filtrar por eso. Con Categorias Aplicables vacío en
+  // todas las preguntas (comportamiento por defecto, sin cargar nada
+  // todavía), esto sigue mostrando las 6 áreas de siempre.
+  const areasConScore = AREAS_SCORE.filter(area => {
     const valor = auditoria['Score ' + area.clave];
-    const num = (valor === '' || valor === undefined || valor === null) ? 0 : Number(valor);
+    return valor !== '' && valor !== undefined && valor !== null;
+  });
+
+  if (areasConScore.length < AREAS_SCORE.length) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...COLOR_MUTED_PDF);
+    doc.text('Se muestran solo las áreas relevantes para este tipo de comercio.', 15, y);
+    y += 6;
+  }
+
+  areasConScore.forEach(area => {
+    const valor = auditoria['Score ' + area.clave];
+    const num = Number(valor);
     const color = COLORES_AREA_PDF[area.clave] || COLOR_ACCENT_PDF;
 
     doc.setFont('helvetica', 'normal');
@@ -966,7 +1001,7 @@ async function generarPDFAuditoria(auditoria) {
 
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...COLOR_TEXT_PDF);
-    doc.text(String(valor === '' || valor === undefined ? '—' : num), 55 + anchoBarraMax + 6, y + 4.5);
+    doc.text(String(num), 55 + anchoBarraMax + 6, y + 4.5);
 
     y += 12;
   });
