@@ -21,6 +21,31 @@ const AREAS_SCORE = [
   { clave: 'Branding', label: 'Branding' }
 ];
 
+// Mapeo de PRESENTACIÓN para el Motor de Diagnóstico. Los códigos ('GB','CC',
+// 'Auditoria','Inspeccion') son la fuente de verdad tal como los guarda el
+// motor (Resultado JSON en Firestore) — esto solo humaniza el texto en
+// pantalla, nunca se usa para calcular ni se reescribe el dato original.
+const CANALES_DIAGNOSTICO = {
+  GB: 'Google Business',
+  CC: 'Contacto y Conversión'
+};
+
+const GRAVEDAD_BADGE_DIAGNOSTICO = {
+  Alta: 'badge-gravedad-alta',
+  Media: 'badge-gravedad-media',
+  Baja: 'badge-gravedad-baja'
+};
+
+const TIPO_EVALUACION_LABEL = {
+  Auditoria: 'Auditoría',
+  Inspeccion: 'Inspección'
+};
+
+function formatPorcentajeDiagnostico(valor) {
+  if (valor === null || valor === undefined || isNaN(valor)) return '—';
+  return Math.round(valor * 100) + '%';
+}
+
 let comercioActual = null;
 let auditoriasActuales = [];
 let inspeccionesActuales = [];
@@ -89,6 +114,13 @@ async function cargarTodo() {
   pintarAuditoriasTab(auditoriasActuales);
   pintarInspeccionesTab(inspeccionesActuales);
   await pintarResumen(c, auditoriasActuales, inspeccionesActuales);
+
+  // El frontend no recalcula nada acá: datos.diagnostico ya viene resuelto
+  // por el motor (Resultado JSON tal cual está en Firestore) y
+  // datos.diagnosticoError distingue "sin diagnóstico todavía" (null, sin
+  // error) de "no se pudo cargar" (null + error informado).
+  pintarResumenDiagnostico(datos.diagnostico, datos.diagnosticoError);
+  pintarTabDiagnostico(datos.diagnostico, datos.diagnosticoError);
 
   pintarImagenes(Array.isArray(imgs) ? imgs : []);
   IMAGENES_ACTUALES = Array.isArray(imgs) ? imgs : [];
@@ -285,6 +317,141 @@ function inferirSeveridad(texto) {
   const critico = ['no tiene', 'no posee', 'no funciona', 'no genera confianza', 'imagen general del negocio percibida como mala'];
   if (critico.some(k => t.indexOf(k) !== -1)) return 'critico';
   return 'importante';
+}
+
+// ─────────────────────────────────────────────
+// DIAGNÓSTICO — card resumida (Resumen) + tab completo
+// Solo presentación: todo el valor viene ya calculado en
+// datos.diagnostico (Resultado JSON de resultadosdiagnostico/{idComercio}).
+// ─────────────────────────────────────────────
+
+function pintarResumenDiagnostico(diagnostico, diagnosticoError) {
+  const cont = document.getElementById('contenidoDiagnosticoResumen');
+
+  if (diagnosticoError) {
+    cont.innerHTML = '<p class="muted">No se pudo cargar el diagnóstico. Probá recargar la página.</p>';
+    return;
+  }
+
+  if (!diagnostico) {
+    cont.innerHTML = '<p class="muted">Todavía no se calculó ningún diagnóstico para este comercio.</p>';
+    return;
+  }
+
+  const madurez = diagnostico.madurezGlobal ? diagnostico.madurezGlobal.valor : null;
+  const oportunidades = Array.isArray(diagnostico.oportunidades) ? diagnostico.oportunidades : [];
+  const tipoLabel = TIPO_EVALUACION_LABEL[diagnostico.tipoEvaluacion] || diagnostico.tipoEvaluacion || '-';
+
+  cont.innerHTML = `
+    <div class="score-card">
+      <div class="score-circulo">
+        <div class="num">${formatPorcentajeDiagnostico(madurez)}</div>
+        <div class="den">madurez</div>
+      </div>
+      <div>
+        <p style="margin-bottom:6px; font-size:13px;">
+          ${oportunidades.length} oportunidad${oportunidades.length === 1 ? '' : 'es'} detectada${oportunidades.length === 1 ? '' : 's'}
+        </p>
+        <p class="muted" style="font-size:12px;">Última evaluación: ${tipoLabel} · ${formatFecha(diagnostico.fecha)}</p>
+      </div>
+    </div>
+    <a href="#" class="ir-a-tab-diagnostico" style="display:inline-block; margin-top: 14px; font-size: 13px;">Ver diagnóstico completo →</a>
+  `;
+
+  const link = cont.querySelector('.ir-a-tab-diagnostico');
+  if (link) {
+    link.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      const tabBtn = document.querySelector('.tab[data-tab="diagnostico"]');
+      if (tabBtn) tabBtn.click();
+    });
+  }
+}
+
+function pintarTabDiagnostico(diagnostico, diagnosticoError) {
+  const cont = document.getElementById('contenidoDiagnosticoTab');
+
+  if (diagnosticoError) {
+    cont.innerHTML = '<p class="muted">No se pudo cargar el diagnóstico. Probá recargar la página.</p>';
+    return;
+  }
+
+  if (!diagnostico) {
+    cont.innerHTML = '<p class="muted">Todavía no se calculó ningún diagnóstico para este comercio. Se genera automáticamente al finalizar una Auditoría o una Inspección.</p>';
+    return;
+  }
+
+  const madurez = diagnostico.madurezGlobal ? diagnostico.madurezGlobal.valor : null;
+  const coberturaGlobal = diagnostico.madurezGlobal ? diagnostico.madurezGlobal.coberturaGlobal : null;
+  const tipoLabel = TIPO_EVALUACION_LABEL[diagnostico.tipoEvaluacion] || diagnostico.tipoEvaluacion || '-';
+
+  const canales = Array.isArray(diagnostico.canales) ? diagnostico.canales : [];
+  const canalesHtml = canales.map(canal => {
+    const nombreCanal = CANALES_DIAGNOSTICO[canal.idCanal] || canal.idCanal;
+    const atributos = Array.isArray(canal.atributos) ? canal.atributos : [];
+
+    const atributosHtml = atributos.map(attr => {
+      if (!attr.aplica) {
+        return `
+          <div class="diagnostico-atributo-fila">
+            <div class="diagnostico-atributo-label"><span>${attr.idAtributo}</span><span class="no-aplica">No aplica</span></div>
+          </div>`;
+      }
+      const pct = attr.valor === null || attr.valor === undefined ? 0 : Math.round(attr.valor * 100);
+      return `
+        <div class="diagnostico-atributo-fila">
+          <div class="diagnostico-atributo-label">
+            <span>${attr.idAtributo}</span>
+            <span>${formatPorcentajeDiagnostico(attr.valor)} · cobertura ${formatPorcentajeDiagnostico(attr.cobertura)}</span>
+          </div>
+          <div class="barra-track"><div class="barra-fill" style="width:${pct}%;"></div></div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="diagnostico-canal">
+        <div class="diagnostico-canal-header">
+          <h4>${nombreCanal}</h4>
+          <span class="cobertura">${formatPorcentajeDiagnostico(canal.valor)} · cobertura ${formatPorcentajeDiagnostico(canal.cobertura)}</span>
+        </div>
+        ${atributosHtml}
+      </div>`;
+  }).join('');
+
+  const oportunidades = Array.isArray(diagnostico.oportunidades) ? diagnostico.oportunidades : [];
+  const oportunidadesHtml = oportunidades.length
+    ? oportunidades.map(op => {
+        const badgeClase = GRAVEDAD_BADGE_DIAGNOSTICO[op.gravedad] || 'badge-sin-servicio';
+        return `
+          <div class="diagnostico-oportunidad">
+            <div class="izq">
+              <div class="nombre">${op.nombre || op.idOportunidad}</div>
+              ${op.servicio ? `<div class="servicio">${op.servicio}</div>` : ''}
+            </div>
+            <span class="badge badge-punto ${badgeClase}">${op.gravedad || '—'}</span>
+          </div>`;
+      }).join('')
+    : '<p class="muted">No se detectaron oportunidades.</p>';
+
+  cont.innerHTML = `
+    <div class="diagnostico-meta">
+      Última actualización: ${tipoLabel} finalizada el ${formatFecha(diagnostico.fecha)} · Cobertura global: ${formatPorcentajeDiagnostico(coberturaGlobal)}
+    </div>
+
+    <div class="score-card" style="margin-bottom: 20px;">
+      <div class="score-circulo">
+        <div class="num">${formatPorcentajeDiagnostico(madurez)}</div>
+        <div class="den">Madurez Global</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom: 20px;">
+      ${canalesHtml}
+    </div>
+
+    <h4 style="margin-bottom: 10px;">Oportunidades</h4>
+    ${oportunidadesHtml}
+  `;
 }
 
 // ─────────────────────────────────────────────
