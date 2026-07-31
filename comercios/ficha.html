@@ -180,6 +180,40 @@
     font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border);
   }
   .hallazgo:last-child { border-bottom: none; }
+
+  /* ================= DIAGNÓSTICO ================= */
+
+  .diagnostico-meta { font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; }
+
+  .diagnostico-canal { margin-bottom: 22px; }
+  .diagnostico-canal:last-child { margin-bottom: 0; }
+  .diagnostico-canal-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .diagnostico-canal-header h4 { margin: 0; font-size: 14px; }
+  .diagnostico-canal-header .cobertura { font-size: 12px; color: var(--text-muted); }
+
+  .diagnostico-atributo-fila { margin-bottom: 10px; }
+  .diagnostico-atributo-fila:last-child { margin-bottom: 0; }
+  .diagnostico-atributo-label {
+    display: flex; justify-content: space-between; font-size: 12px;
+    color: var(--text-secondary); margin-bottom: 4px;
+  }
+  .diagnostico-atributo-label .no-aplica { color: var(--text-muted); font-style: italic; }
+
+  .diagnostico-oportunidad {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; font-size: 13px; padding: 8px 0; border-bottom: 1px solid var(--border);
+  }
+  .diagnostico-oportunidad:last-child { border-bottom: none; }
+  .diagnostico-oportunidad .izq { min-width: 0; }
+  .diagnostico-oportunidad .nombre { font-weight: 500; }
+  .diagnostico-oportunidad .servicio { color: var(--text-secondary); font-size: 12px; }
+
+  .badge-gravedad-alta { background: var(--danger-soft); color: var(--danger); }
+  .badge-gravedad-media { background: var(--warning-soft); color: var(--warning); }
+  .badge-gravedad-baja { background: var(--success-soft); color: var(--success); }
 </style>
 </head>
 <body>
@@ -236,6 +270,7 @@
           <div class="tab activo" data-tab="resumen">Resumen</div>
           <div class="tab" data-tab="inspecciones">Inspecciones</div>
           <div class="tab" data-tab="auditorias">Auditorías</div>
+          <div class="tab" data-tab="diagnostico">Diagnóstico</div>
           <div class="tab" data-tab="archivos">Archivos</div>
         </div>
 
@@ -250,6 +285,11 @@
               <h3 style="margin-bottom: 12px;">Última inspección</h3>
               <div id="contenidoUltimaInspeccion"><p class="muted">Cargando...</p></div>
             </div>
+          </div>
+
+          <div class="card" style="margin-bottom: 16px;">
+            <h3 style="margin-bottom: 12px;">Diagnóstico</h3>
+            <div id="contenidoDiagnosticoResumen"><p class="muted">Cargando...</p></div>
           </div>
 
           <div class="card">
@@ -281,6 +321,15 @@
             </div>
             <p class="muted" style="margin-bottom: 10px;">Historial de evaluaciones digitales de este comercio.</p>
             <div id="listaAuditorias"><p class="muted">Cargando...</p></div>
+          </div>
+        </div>
+
+        <!-- TAB: Diagnóstico -->
+        <div class="tab-panel oculto" data-tab-panel="diagnostico">
+          <div class="card">
+            <h3 style="margin-bottom: 4px;">Diagnóstico</h3>
+            <p class="muted" style="margin-bottom: 14px;">Resultado acumulado del Motor de Diagnóstico sobre el historial completo del comercio.</p>
+            <div id="contenidoDiagnosticoTab"><p class="muted">Cargando...</p></div>
           </div>
         </div>
 
