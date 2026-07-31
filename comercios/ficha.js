@@ -436,6 +436,7 @@ function pintarTabDiagnostico(diagnostico, diagnosticoError) {
   cont.innerHTML = `
     <div class="diagnostico-meta">
       Última actualización: ${tipoLabel} finalizada el ${formatFecha(diagnostico.fecha)} · Cobertura global: ${formatPorcentajeDiagnostico(coberturaGlobal)}
+      <button type="button" id="btnDescargarPDFDiagnostico" class="btn-secundario" style="margin-left: 12px;">Descargar Informe PDF</button>
     </div>
 
     <div class="score-card" style="margin-bottom: 20px;">
@@ -452,6 +453,28 @@ function pintarTabDiagnostico(diagnostico, diagnosticoError) {
     <h4 style="margin-bottom: 10px;">Oportunidades</h4>
     ${oportunidadesHtml}
   `;
+
+  // El PDF de cliente es una capa de presentación aparte de este tab
+  // interno: usa el mismo objeto `diagnostico` (Resultado JSON, sin
+  // recalcular nada acá) pero resuelve nombre/servicio/gravedad de
+  // Oportunidades contra el catálogo VIGENTE, no contra lo congelado en
+  // el histórico. Ver generarPDFDiagnostico.
+  const btnPDF = document.getElementById('btnDescargarPDFDiagnostico');
+  if (btnPDF) {
+    btnPDF.addEventListener('click', async () => {
+      btnPDF.disabled = true;
+      const textoOriginal = btnPDF.textContent;
+      btnPDF.textContent = 'Generando...';
+      try {
+        await generarPDFDiagnostico(diagnostico);
+      } catch (err) {
+        console.error('Error generando PDF de diagnóstico:', err);
+        alert('No se pudo generar el PDF: ' + (err && err.message ? err.message : err));
+      }
+      btnPDF.disabled = false;
+      btnPDF.textContent = textoOriginal;
+    });
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -1299,6 +1322,286 @@ function dibujarPanelSinHallazgos(doc, y) {
   doc.text('No se detectaron problemas ni se sugirieron servicios adicionales.', 38, y + 19);
 
   return y + altoCaja + 10;
+}
+
+// ─────────────────────────────────────────────
+// INFORME PDF DE DIAGNÓSTICO
+//
+// Capa de presentación PURA sobre ResultadoDiagnostico (diagnostico.*, tal
+// cual llega de getFichaCompleta / Resultado JSON). No recalcula nada del
+// motor. La única llamada nueva al backend es el catálogo VIGENTE de
+// Oportunidades (obtenerOportunidadesVigentesPDF) — nombre/servicio/
+// gravedad de cada oportunidad se resuelven en vivo contra ese catálogo,
+// nunca contra lo que quedó congelado en el histórico; el histórico solo
+// aporta idOportunidad como identidad. Si un idOportunidad histórico ya no
+// existe en el catálogo vigente, se omite del PDF.
+//
+// Copy de textos (estado insuficiente/preliminar/completo, CTA, etiquetas
+// de atributo) es un supuesto propio a falta del copy final del documento
+// aprobado — señalado en el resumen de la implementación.
+// ─────────────────────────────────────────────
+
+// Rangos de cobertura aprobados (calificador interno, nunca se muestra el
+// número al cliente): ver eleva-lab-motor-diagnostico.
+function bandaCoberturaPDF_(coberturaGlobal) {
+  if (coberturaGlobal === null || coberturaGlobal === undefined) return 'insuficiente';
+  if (coberturaGlobal >= 0.75) return 'completo';
+  if (coberturaGlobal >= 0.35) return 'preliminar';
+  return 'insuficiente';
+}
+
+// Rangos de Madurez Global aprobados (versión inicial del MVP).
+function nivelMadurezPDF_(valor) {
+  if (valor === null || valor === undefined) return null;
+  if (valor < 0.35) return 'Arrancando';
+  if (valor < 0.65) return 'En desarrollo';
+  if (valor < 0.85) return 'Consolidado';
+  return 'Avanzado';
+}
+
+// SUPUESTO: etiquetas cliente para idAtributo técnico — el documento
+// aprobado las define, pero no está disponible en este entorno. Ocultan
+// el idAtributo crudo (Existencia/Completitud/Conversión) como pide la
+// especificación; ajustar acá si el copy real difiere.
+const ATRIBUTOS_LABEL_PDF = {
+  Existencia: 'Presencia',
+  Completitud: 'Información completa',
+  Conversión: 'Facilita el contacto'
+};
+
+const ORDEN_GRAVEDAD_PDF = { Alta: 0, Media: 1, Baja: 2 };
+
+/**
+ * Estado destacado (Madurez o mensaje de relevamiento insuficiente) según
+ * la banda de cobertura. Nunca muestra el número de Madurez Global, solo
+ * el nivel cualitativo — ni siquiera en 'completo'.
+ */
+function armarSeccionEstadoPDF_(doc, y, diagnostico, banda) {
+  const madurez = diagnostico.madurezGlobal ? diagnostico.madurezGlobal.valor : null;
+
+  if (banda === 'insuficiente') {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(...COLOR_TEXT_PDF);
+    doc.text('Todavía estamos relevando tu presencia digital', 15, y);
+    y += 9;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(...COLOR_MUTED_PDF);
+    const lineas = doc.splitTextToSize(
+      'Este comercio todavía no cuenta con información suficiente para una evaluación completa. A medida que avancemos con el relevamiento, este informe se irá completando.',
+      180
+    );
+    doc.text(lineas, 15, y);
+    return y + 6 * lineas.length + 10;
+  }
+
+  const nivel = nivelMadurezPDF_(madurez);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(28);
+  doc.setTextColor(...COLOR_ACCENT_PDF);
+  doc.text(nivel || '-', 15, y + 11);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(...COLOR_MUTED_PDF);
+  doc.text('Nivel de madurez digital', 15, y + 18);
+  y += 30;
+
+  if (banda === 'preliminar') {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(...COLOR_MUTED_PDF);
+    const lineas = doc.splitTextToSize(
+      'Este informe corresponde a un primer relevamiento. Algunas áreas requieren una revisión más profunda para completar el diagnóstico.',
+      180
+    );
+    doc.text(lineas, 15, y);
+    y += 6 * lineas.length + 6;
+  }
+
+  return y;
+}
+
+/**
+ * Situación por canal, aplicando la regla uniforme de visualización:
+ *  - canal.valor === null (todo hueco) → el canal completo no se muestra
+ *  - atributo.aplica === false → no se muestra en el PDF de cliente
+ *    (evita mostrar el flag "No aplica" tal cual, como pide la spec)
+ *  - atributo.aplica === true && valor === null (hueco) → no se muestra
+ *  - resto → barra visual, sin número ni cobertura (cobertura nunca se
+ *    muestra al cliente, en ningún nivel)
+ */
+function armarSeccionCanalesPDF_(doc, y, diagnostico) {
+  const canales = Array.isArray(diagnostico.canales) ? diagnostico.canales : [];
+  const canalesVisibles = canales.filter(c => c.valor !== null && c.valor !== undefined);
+  if (canalesVisibles.length === 0) return y;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...COLOR_TEXT_PDF);
+  doc.text('Situación por canal', 15, y);
+  y += 9;
+
+  const anchoBarraMax = 110;
+
+  canalesVisibles.forEach(canal => {
+    if (y > 260) { doc.addPage(); y = 20; }
+
+    const nombreCanal = CANALES_DIAGNOSTICO[canal.idCanal] || canal.idCanal;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.setTextColor(...COLOR_TEXT_PDF);
+    doc.text(nombreCanal, 15, y);
+    y += 7;
+
+    const atributos = Array.isArray(canal.atributos) ? canal.atributos : [];
+    atributos.forEach(attr => {
+      if (!attr.aplica) return; // Regla 1 — no se muestra en el PDF de cliente
+      if (attr.valor === null || attr.valor === undefined) return; // hueco
+
+      if (y > 270) { doc.addPage(); y = 20; }
+
+      const label = ATRIBUTOS_LABEL_PDF[attr.idAtributo] || attr.idAtributo;
+      const anchoFill = anchoBarraMax * Math.max(0, Math.min(attr.valor, 1));
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...COLOR_TEXT_PDF);
+      doc.text(label, 20, y + 3.5);
+
+      doc.setFillColor(230, 230, 235);
+      doc.roundedRect(70, y, anchoBarraMax, 4, 1.2, 1.2, 'F');
+      if (attr.valor > 0) {
+        doc.setFillColor(...COLOR_ACCENT_PDF);
+        doc.roundedRect(70, y, anchoFill, 4, 1.2, 1.2, 'F');
+      }
+
+      y += 9;
+    });
+
+    y += 3;
+  });
+
+  return y + 3;
+}
+
+/**
+ * Oportunidades + Servicios recomendados, resolviendo cada oportunidad
+ * histórica (solo idOportunidad) contra el catálogo VIGENTE. El punto
+ * exacto del lookup en vivo es este .map() de abajo. Oportunidades cuyo
+ * idOportunidad ya no existe en el catálogo actual se omiten sin más.
+ */
+function armarSeccionOportunidadesPDF_(doc, y, diagnostico, catalogoVigente) {
+  const historicas = Array.isArray(diagnostico.oportunidades) ? diagnostico.oportunidades : [];
+  const catalogoPorId = {};
+  (catalogoVigente || []).forEach(o => { catalogoPorId[o.idOportunidad] = o; });
+
+  const resueltas = historicas
+    .map(op => {
+      const vigente = catalogoPorId[op.idOportunidad]; // ← lookup en vivo
+      if (!vigente) return null; // idOportunidad histórico ya no existe en el catálogo actual
+      return {
+        idOportunidad: op.idOportunidad,
+        nombre: vigente.nombre,
+        servicio: vigente.servicioAsociado,
+        gravedad: vigente.gravedad
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => (ORDEN_GRAVEDAD_PDF[a.gravedad] ?? 99) - (ORDEN_GRAVEDAD_PDF[b.gravedad] ?? 99));
+
+  y = dibujarListaPDF(
+    doc, 'Principales hallazgos', resueltas.map(op => op.nombre), y,
+    COLOR_DANGER_PDF, 'No se detectaron hallazgos relevantes en esta evaluación.'
+  );
+  y += 4;
+
+  const servicios = [...new Set(resueltas.map(op => op.servicio).filter(Boolean))];
+  y = dibujarListaPDF(
+    doc, 'Servicios recomendados', servicios, y,
+    COLOR_SUCCESS_PDF, 'No hay servicios puntuales para recomendar por el momento.'
+  );
+
+  return y;
+}
+
+/**
+ * CTA final, con copy distinto según banda de cobertura. SUPUESTO: texto
+ * exacto no definido en el documento aprobado disponible acá — ajustar si
+ * el copy real difiere.
+ */
+function armarCTAPDF_(doc, y, banda) {
+  if (y > 250) { doc.addPage(); y = 20; }
+
+  let titulo, texto;
+  if (banda === 'insuficiente') {
+    titulo = 'Próximo paso';
+    texto = 'Coordinemos una instancia de relevamiento para completar tu diagnóstico y poder mostrarte resultados concretos.';
+  } else if (banda === 'preliminar') {
+    titulo = 'Próximos pasos';
+    texto = 'Con estos resultados ya podemos avanzar en los servicios recomendados. Una auditoría más profunda nos permite completar y afinar el diagnóstico, sin ser un requisito para empezar.';
+  } else {
+    titulo = 'Próximos pasos';
+    texto = 'Con este diagnóstico completo, podemos avanzar directamente con los servicios recomendados para tu negocio.';
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(...COLOR_TEXT_PDF);
+  doc.text(titulo, 15, y);
+  y += 8;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(...COLOR_MUTED_PDF);
+  const lineas = doc.splitTextToSize(texto, 180);
+  doc.text(lineas, 15, y);
+
+  return y + 6 * lineas.length + 8;
+}
+
+/**
+ * Orquestador. Único punto que llama al backend (catálogo vigente de
+ * Oportunidades) — todo lo demás sale de `diagnostico`, ya en memoria
+ * (getFichaCompleta, sin recalcular nada del motor).
+ */
+async function generarPDFDiagnostico(diagnostico) {
+  if (!diagnostico) {
+    alert('Todavía no hay un diagnóstico calculado para este comercio.');
+    return;
+  }
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    throw new Error('No se cargó la librería para generar PDFs (jsPDF). Recargá la página (Ctrl+F5) y probá de nuevo; si sigue, puede haber un bloqueador de contenido activo en el navegador.');
+  }
+
+  const catalogoResp = await apiGet('obtenerOportunidadesVigentesPDF', { idComercio: ID_COMERCIO });
+  if (!catalogoResp || !catalogoResp.ok) {
+    throw new Error('No se pudo obtener el catálogo vigente de Oportunidades.');
+  }
+  const catalogoVigente = catalogoResp.oportunidades;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  let y = await dibujarMembrete(doc, 'Informe de Diagnóstico Digital');
+
+  const coberturaGlobal = diagnostico.madurezGlobal ? diagnostico.madurezGlobal.coberturaGlobal : null;
+  const banda = bandaCoberturaPDF_(coberturaGlobal);
+
+  y = armarSeccionEstadoPDF_(doc, y, diagnostico, banda);
+  y += 4;
+  y = armarSeccionCanalesPDF_(doc, y, diagnostico);
+  y += 4;
+
+  if (banda !== 'insuficiente') {
+    y = armarSeccionOportunidadesPDF_(doc, y, diagnostico, catalogoVigente);
+  }
+
+  y = armarCTAPDF_(doc, y, banda);
+
+  dibujarPiePDF(doc);
+  doc.save(nombreArchivoPDF('Diagnostico', diagnostico.fecha));
 }
 
 // ─────────────────────────────────────────────
