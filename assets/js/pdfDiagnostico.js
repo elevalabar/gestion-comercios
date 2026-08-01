@@ -20,9 +20,16 @@
 // exclusivos del informe de diagnóstico.
 //
 // Copy de textos (estado insuficiente/preliminar/completo, CTA, etiquetas
-// de atributo, descripciones por defecto) es un supuesto propio a falta
-// del copy final del documento aprobado — señalado en el resumen de la
-// implementación de cada versión.
+// de atributo, etiquetas de estado de barra, descripciones por defecto) es
+// un supuesto propio a falta del copy final del documento aprobado —
+// señalado en el resumen de la implementación de cada versión.
+//
+// V3: iteración exclusivamente visual sobre la V2 ya validada. No cambia
+// contenido, orden, filtrado/dedupe, lookup ni ninguna regla de cobertura/
+// madurez/oportunidades — solo cómo se dibuja. Un detalle corregido en esta
+// versión: la paleta semántica por atributo no coincidía con la aprobada
+// (Completitud usaba el mismo verde que Conversión); queda Presencia=Accent,
+// Completitud=Warning, Conversión=Success.
 // ─────────────────────────────────────────────
 
 const PDFDiagnostico = (function () {
@@ -59,6 +66,16 @@ const PDFDiagnostico = (function () {
     Conversión: 'Facilita el contacto'
   };
 
+  // SUPUESTO: etiqueta cliente para el estado de cada barra de progreso
+  // (V3 — no reemplaza al valor numérico, que nunca se muestra). Ajustar
+  // si el copy final define otra terminología.
+  function etiquetaEstadoValor_(valor) {
+    if (valor === null || valor === undefined) return '';
+    if (valor >= 0.99) return 'Completo';
+    if (valor > 0) return 'Parcial';
+    return 'Pendiente';
+  }
+
   const ORDEN_GRAVEDAD = { Alta: 0, Media: 1, Baja: 2 };
 
   const CANALES_LABEL = {
@@ -68,14 +85,18 @@ const PDFDiagnostico = (function () {
 
   // ───────────────────────────────────────────
   // PALETA — colores base compartidos con ficha.js (marca) + colores
-  // propios del diagnóstico (semánticos por atributo, tarjetas)
+  // propios del diagnóstico (semánticos por atributo, tarjetas, gravedad).
+  // Paleta semántica aprobada: Presencia→Accent, Completitud→Warning,
+  // Conversión→Success. Los colores semánticos se usan solo para
+  // comunicar significado (atributo, gravedad), nunca como decoración.
   // ───────────────────────────────────────────
 
   const COLOR_CARD_BG = [248, 249, 252];
+  const COLOR_CARD_BG_ACCENT = [235, 239, 253]; // tinte Accent muy suave — solo para el CTA
   const COLOR_CARD_BORDER = [224, 226, 234];
   const COLOR_PRESENCIA = [75, 110, 240];      // = COLOR_ACCENT_PDF, coherencia de marca
-  const COLOR_COMPLETITUD = [29, 158, 117];    // = COLOR_SUCCESS_PDF
-  const COLOR_CONVERSION = [126, 87, 194];     // violeta — tercer semántico, no estridente
+  const COLOR_COMPLETITUD = [199, 138, 33];    // Warning discreto (ámbar)
+  const COLOR_CONVERSION = [29, 158, 117];     // = COLOR_SUCCESS_PDF
   const COLOR_TRACK = [230, 230, 235];
 
   function colorPorAtributo_(idAtributo) {
@@ -84,6 +105,14 @@ const PDFDiagnostico = (function () {
     if (idAtributo === 'Conversión') return COLOR_CONVERSION;
     return COLOR_PRESENCIA;
   }
+
+  // Variantes discretas para el chip de gravedad — evitan rojo agresivo o
+  // apariencia de alerta; fondo claro + texto de mayor contraste.
+  const GRAVEDAD_ESTILO = {
+    Alta: { texto: [156, 66, 40], fondo: [250, 235, 229] },
+    Media: { texto: [154, 105, 22], fondo: [252, 241, 220] },
+    Baja: { texto: [107, 110, 122], fondo: [237, 238, 242] }
+  };
 
   // ───────────────────────────────────────────
   // HELPERS DE DIBUJO propios (sin depender de dibujarListaPDF/dibujarChipPDF
@@ -98,14 +127,49 @@ const PDFDiagnostico = (function () {
     return y;
   }
 
-  function dibujarTarjetaFondo_(doc, y, alto) {
+  // opciones: { x, ancho, colorFondo } — todas opcionales, con el
+  // comportamiento previo (tarjeta a todo el ancho de página) como default.
+  // Se usa tal cual (sin opciones) en comercio/estado/CTA; con x/ancho
+  // custom para las tarjetas de canal lado a lado; con colorFondo custom
+  // solo en el CTA (tinte Accent en vez del fondo neutro habitual).
+  function dibujarTarjetaFondo_(doc, y, alto, opciones) {
     const anchoPagina = doc.internal.pageSize.getWidth();
-    const anchoCaja = anchoPagina - 30;
-    doc.setFillColor(...COLOR_CARD_BG);
+    const x = (opciones && opciones.x !== undefined) ? opciones.x : 15;
+    const ancho = (opciones && opciones.ancho !== undefined) ? opciones.ancho : anchoPagina - 30;
+    const colorFondo = (opciones && opciones.colorFondo) || COLOR_CARD_BG;
+    doc.setFillColor(...colorFondo);
     doc.setDrawColor(...COLOR_CARD_BORDER);
     doc.setLineWidth(0.3);
-    doc.roundedRect(15, y, anchoCaja, alto, 3, 3, 'FD');
-    return anchoCaja;
+    doc.roundedRect(x, y, ancho, alto, 3, 3, 'FD');
+    return ancho;
+  }
+
+  // Ícono de "solución" para Servicios recomendados: círculo de check
+  // dibujado con líneas (no depende de glyphs de fuente).
+  function dibujarIconoCheck_(doc, cx, cy) {
+    doc.setFillColor(...COLOR_CONVERSION);
+    doc.circle(cx, cy, 3, 'F');
+    doc.setDrawColor(255, 255, 255);
+    doc.setLineWidth(0.8);
+    doc.line(cx - 1.3, cy, cx - 0.3, cy + 1.2);
+    doc.line(cx - 0.3, cy + 1.2, cx + 1.6, cy - 1.3);
+  }
+
+  // Chip de gravedad, alineado a la derecha de xDerecha.
+  function dibujarChipGravedad_(doc, xDerecha, yBase, gravedad) {
+    const estilo = GRAVEDAD_ESTILO[gravedad];
+    if (!estilo) return;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    const anchoTexto = doc.getTextWidth(gravedad);
+    const padding = 3;
+    const anchoChip = anchoTexto + padding * 2;
+    const alto = 5;
+    const x = xDerecha - anchoChip;
+    doc.setFillColor(...estilo.fondo);
+    doc.roundedRect(x, yBase, anchoChip, alto, 1.2, 1.2, 'F');
+    doc.setTextColor(...estilo.texto);
+    doc.text(gravedad, x + padding, yBase + 3.6);
   }
 
   // ───────────────────────────────────────────
@@ -190,10 +254,15 @@ const PDFDiagnostico = (function () {
   // (viene tal cual de comercioActual en la ficha). No agrega llamadas a
   // datos que no existen. Deja espacio reservado para un logo del comercio
   // a futuro (comentado, sin implementar la carga todavía).
+  //
+  // opciones.amplia (V3): en banda "insuficiente" se agranda levemente la
+  // tarjeta (más aire interno) para que la página no se sienta vacía,
+  // sin agregar ni inventar ningún dato nuevo.
   // ───────────────────────────────────────────
 
-  function dibujarTarjetaComercio_(doc, y, comercio) {
-    const alto = 34;
+  function dibujarTarjetaComercio_(doc, y, comercio, opciones) {
+    const amplia = !!(opciones && opciones.amplia);
+    const alto = amplia ? 40 : 34;
     // Futuro: si comercio.logoUrl (o campo equivalente) existiera, acá es
     // donde se dibujaría con doc.addImage, corriendo xTexto como se hace
     // en dibujarMembrete_ con el logo de Eleva Lab. No se implementa ahora.
@@ -270,7 +339,9 @@ const PDFDiagnostico = (function () {
     const madurez = diagnostico.madurezGlobal ? diagnostico.madurezGlobal.valor : null;
 
     if (banda === 'insuficiente') {
-      const alto = 38;
+      // V3: alto levemente mayor (antes 38) para dar más presencia cuando
+      // es de los pocos bloques que se muestran en esta banda.
+      const alto = 44;
       const anchoCaja = dibujarTarjetaFondo_(doc, y, alto);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(13);
@@ -284,7 +355,7 @@ const PDFDiagnostico = (function () {
         'Este comercio todavía no cuenta con información suficiente para una evaluación completa. A medida que avancemos con el relevamiento, este informe se irá completando.',
         anchoCaja - 14
       );
-      doc.text(lineas, 22, y + 19);
+      doc.text(lineas, 22, y + 22);
       return y + alto + 10;
     }
 
@@ -319,15 +390,76 @@ const PDFDiagnostico = (function () {
   }
 
   // ───────────────────────────────────────────
-  // SITUACIÓN POR CANAL — tarjetas, colores semánticos por atributo.
-  // Regla de visualización uniforme ya aprobada, sin cambios: canal
-  // enteramente hueco no se muestra; atributo aplica=false no se muestra;
-  // atributo aplica=true con valor=null (hueco) no se muestra.
+  // SITUACIÓN POR CANAL — tarjetas lado a lado (Google Business | Contacto
+  // y Conversión) cuando hay más de un canal visible, apiladas si por algún
+  // motivo hubiera más de dos. Regla de visualización uniforme ya aprobada,
+  // sin cambios: canal enteramente hueco no se muestra; atributo
+  // aplica=false no se muestra; atributo aplica=true con valor=null (hueco)
+  // no se muestra. Las tarjetas son independientes en altura — no se fuerza
+  // que ambas midan lo mismo.
   // ───────────────────────────────────────────
 
+  const BASE_ALTO_CANAL = 16;
+  const ALTO_POR_ATRIBUTO = 13; // antes 11 — +2 para la etiqueta de estado de la barra
+
+  function atributosVisiblesDeCanal_(canal) {
+    return (Array.isArray(canal.atributos) ? canal.atributos : [])
+      .filter(a => a.aplica && a.valor !== null && a.valor !== undefined);
+  }
+
+  function alturaTarjetaCanal_(canal) {
+    return BASE_ALTO_CANAL + atributosVisiblesDeCanal_(canal).length * ALTO_POR_ATRIBUTO;
+  }
+
+  function dibujarTarjetaCanal_(doc, x, y, ancho, canal) {
+    const atributosVisibles = atributosVisiblesDeCanal_(canal);
+    const altoCaja = alturaTarjetaCanal_(canal);
+    dibujarTarjetaFondo_(doc, y, altoCaja, { x, ancho });
+
+    const nombreCanal = CANALES_LABEL[canal.idCanal] || canal.idCanal;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...COLOR_TEXT_PDF);
+    doc.text(nombreCanal, x + 7, y + 11);
+
+    let yAtributo = y + 20;
+    const anchoBarraMax = ancho - 20;
+
+    atributosVisibles.forEach(attr => {
+      const label = ATRIBUTOS_LABEL[attr.idAtributo] || attr.idAtributo;
+      const color = colorPorAtributo_(attr.idAtributo);
+      const anchoFill = anchoBarraMax * Math.max(0, Math.min(attr.valor, 1));
+      const estado = etiquetaEstadoValor_(attr.valor);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...COLOR_TEXT_PDF);
+      doc.text(label, x + 7, yAtributo - 1.5);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...COLOR_MUTED_PDF);
+      doc.text(estado, x + 7 + anchoBarraMax, yAtributo - 1.5, { align: 'right' });
+
+      doc.setFillColor(...COLOR_TRACK);
+      doc.roundedRect(x + 7, yAtributo, anchoBarraMax, 3.5, 1.2, 1.2, 'F');
+      if (attr.valor > 0) {
+        doc.setFillColor(...color);
+        doc.roundedRect(x + 7, yAtributo, anchoFill, 3.5, 1.2, 1.2, 'F');
+      }
+
+      yAtributo += ALTO_POR_ATRIBUTO;
+    });
+
+    return altoCaja;
+  }
+
   function armarSeccionCanales_(doc, y, diagnostico) {
+    const anchoPagina = doc.internal.pageSize.getWidth();
     const canales = Array.isArray(diagnostico.canales) ? diagnostico.canales : [];
-    const canalesVisibles = canales.filter(c => c.valor !== null && c.valor !== undefined);
+    const canalesVisibles = canales.filter(
+      c => c.valor !== null && c.valor !== undefined && atributosVisiblesDeCanal_(c).length > 0
+    );
     if (canalesVisibles.length === 0) return y;
 
     doc.setFont('helvetica', 'bold');
@@ -336,47 +468,23 @@ const PDFDiagnostico = (function () {
     doc.text('Situación por canal', 15, y);
     y += 9;
 
-    canalesVisibles.forEach(canal => {
-      const atributosVisibles = (Array.isArray(canal.atributos) ? canal.atributos : [])
-        .filter(a => a.aplica && a.valor !== null && a.valor !== undefined);
-      if (atributosVisibles.length === 0) return;
+    const gap = 6;
+    const anchoTotal = anchoPagina - 30;
 
-      y = saltoPaginaSiHaceFalta_(doc, y, 250);
+    for (let i = 0; i < canalesVisibles.length; i += 2) {
+      const par = canalesVisibles.slice(i, i + 2);
+      const alturaMax = Math.max(...par.map(alturaTarjetaCanal_));
 
-      const altoCaja = 16 + atributosVisibles.length * 11;
-      const anchoCaja = dibujarTarjetaFondo_(doc, y, altoCaja);
+      y = saltoPaginaSiHaceFalta_(doc, y, 275 - alturaMax);
 
-      const nombreCanal = CANALES_LABEL[canal.idCanal] || canal.idCanal;
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setTextColor(...COLOR_TEXT_PDF);
-      doc.text(nombreCanal, 22, y + 11);
-
-      let yAtributo = y + 20;
-      const anchoBarraMax = anchoCaja - 20;
-
-      atributosVisibles.forEach(attr => {
-        const label = ATRIBUTOS_LABEL[attr.idAtributo] || attr.idAtributo;
-        const color = colorPorAtributo_(attr.idAtributo);
-        const anchoFill = anchoBarraMax * Math.max(0, Math.min(attr.valor, 1));
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(...COLOR_TEXT_PDF);
-        doc.text(label, 22, yAtributo - 1.5);
-
-        doc.setFillColor(...COLOR_TRACK);
-        doc.roundedRect(22, yAtributo, anchoBarraMax, 3.5, 1.2, 1.2, 'F');
-        if (attr.valor > 0) {
-          doc.setFillColor(...color);
-          doc.roundedRect(22, yAtributo, anchoFill, 3.5, 1.2, 1.2, 'F');
-        }
-
-        yAtributo += 11;
+      const anchoCard = par.length === 2 ? (anchoTotal - gap) / 2 : anchoTotal;
+      par.forEach((canal, idx) => {
+        const x = 15 + idx * (anchoCard + gap);
+        dibujarTarjetaCanal_(doc, x, y, anchoCard, canal);
       });
 
-      y += altoCaja + 8;
-    });
+      y += alturaMax + 8;
+    }
 
     return y + 2;
   }
@@ -394,6 +502,8 @@ const PDFDiagnostico = (function () {
   //    oportunidad se sigue mostrando (tiene nombre/descripción propios),
   //    pero NO se agrega ninguna entrada a Servicios recomendados por esa
   //    oportunidad. Nunca se muestra un ID crudo ni un servicio incompleto.
+  //
+  // (Sin cambios en V3 — es lógica funcional, no capa visual.)
   // ───────────────────────────────────────────
 
   function resolverOportunidadesYServicios_(diagnostico, catalogoOportunidades, catalogoServicios) {
@@ -435,7 +545,15 @@ const PDFDiagnostico = (function () {
     return { oportunidadesResueltas, serviciosResueltos };
   }
 
+  // ───────────────────────────────────────────
+  // SECCIÓN OPORTUNIDADES — badge numerado circular + chip de gravedad
+  // discreto + separador entre ítems. Mismo contenido/orden/filtrado que
+  // ya resolvió resolverOportunidadesYServicios_ (sin cambios acá).
+  // ───────────────────────────────────────────
+
   function armarSeccionOportunidades_(doc, y, oportunidadesResueltas) {
+    const anchoPagina = doc.internal.pageSize.getWidth();
+
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.setTextColor(...COLOR_TEXT_PDF);
@@ -451,35 +569,60 @@ const PDFDiagnostico = (function () {
     }
 
     oportunidadesResueltas.forEach((op, i) => {
-      y = saltoPaginaSiHaceFalta_(doc, y, 255);
+      y = saltoPaginaSiHaceFalta_(doc, y, 250);
 
       const numero = String(i + 1).padStart(2, '0');
+      const centroX = 19;
 
+      doc.setFillColor(...COLOR_PRESENCIA);
+      doc.circle(centroX, y, 4.2, 'F');
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(13);
-      doc.setTextColor(...COLOR_PRESENCIA);
-      doc.text(numero, 15, y);
+      doc.setFontSize(8.5);
+      doc.setTextColor(255, 255, 255);
+      doc.text(numero, centroX, y + 1.3, { align: 'center' });
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       doc.setTextColor(...COLOR_TEXT_PDF);
-      doc.text(op.nombre || '', 28, y);
-      y += 6;
+      doc.text(op.nombre || '', 30, y + 1.3);
+
+      if (op.gravedad) {
+        dibujarChipGravedad_(doc, anchoPagina - 15, y - 3.3, op.gravedad);
+      }
+
+      y += 9;
 
       if (op.descripcion) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(...COLOR_MUTED_PDF);
-        const lineas = doc.splitTextToSize(op.descripcion, 165);
-        doc.text(lineas, 28, y);
+        const lineas = doc.splitTextToSize(op.descripcion, 163);
+        doc.text(lineas, 30, y);
         y += 5 * lineas.length;
       }
 
-      y += 6;
+      y += 5;
+
+      const esUltima = i === oportunidadesResueltas.length - 1;
+      if (!esUltima) {
+        doc.setDrawColor(...COLOR_CARD_BORDER);
+        doc.setLineWidth(0.2);
+        doc.line(15, y, anchoPagina - 15, y);
+        y += 7;
+      } else {
+        y += 2;
+      }
     });
 
     return y + 2;
   }
+
+  // ───────────────────────────────────────────
+  // SECCIÓN SERVICIOS — bloques más chicos que Oportunidades (refuerza
+  // "detectamos → te proponemos"), con ícono de check en vez de precio o
+  // llamado urgente. Mismo contenido/lookup que ya resolvió
+  // resolverOportunidadesYServicios_ (sin cambios acá).
+  // ───────────────────────────────────────────
 
   function armarSeccionServicios_(doc, y, serviciosResueltos) {
     doc.setFont('helvetica', 'bold');
@@ -499,22 +642,24 @@ const PDFDiagnostico = (function () {
     serviciosResueltos.forEach(servicio => {
       y = saltoPaginaSiHaceFalta_(doc, y, 260);
 
+      dibujarIconoCheck_(doc, 18, y - 1.5);
+
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10.5);
-      doc.setTextColor(...COLOR_COMPLETITUD);
-      doc.text(servicio.nombre || '', 15, y);
-      y += 5.5;
+      doc.setFontSize(10);
+      doc.setTextColor(...COLOR_TEXT_PDF);
+      doc.text(servicio.nombre || '', 26, y);
+      y += 5;
 
       if (servicio.descripcion) {
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
+        doc.setFontSize(8.5);
         doc.setTextColor(...COLOR_MUTED_PDF);
-        const lineas = doc.splitTextToSize(servicio.descripcion, 175);
-        doc.text(lineas, 15, y);
-        y += 5 * lineas.length;
+        const lineas = doc.splitTextToSize(servicio.descripcion, 167);
+        doc.text(lineas, 26, y);
+        y += 4.5 * lineas.length;
       }
 
-      y += 5;
+      y += 4;
     });
 
     return y + 2;
@@ -522,6 +667,8 @@ const PDFDiagnostico = (function () {
 
   // ───────────────────────────────────────────
   // CTA — tarjeta final, mismo copy aprobado por banda de cobertura.
+  // V3: fondo con tinte Accent muy suave para darle más presencia sin
+  // convertirlo en banner.
   // ───────────────────────────────────────────
 
   function armarCTA_(doc, y, banda) {
@@ -537,7 +684,7 @@ const PDFDiagnostico = (function () {
     }
 
     const alto = banda === 'insuficiente' ? 26 : 30;
-    const anchoCaja = dibujarTarjetaFondo_(doc, y, alto);
+    const anchoCaja = dibujarTarjetaFondo_(doc, y, alto, { colorFondo: COLOR_CARD_BG_ACCENT });
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
@@ -614,11 +761,15 @@ const PDFDiagnostico = (function () {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
-    let y = await dibujarMembrete_(doc, configuracionMarca);
-    y = dibujarTarjetaComercio_(doc, y, comercio);
-
+    // Banda calculada antes de dibujar nada: la usa tanto la sección de
+    // estado como la tarjeta de comercio (V3: densidad — más aire en la
+    // tarjeta de comercio cuando el resto del informe va a mostrar poco
+    // contenido). Sin cambios en la regla de cálculo de banda en sí.
     const coberturaGlobal = diagnostico.madurezGlobal ? diagnostico.madurezGlobal.coberturaGlobal : null;
     const banda = bandaCobertura_(coberturaGlobal);
+
+    let y = await dibujarMembrete_(doc, configuracionMarca);
+    y = dibujarTarjetaComercio_(doc, y, comercio, { amplia: banda === 'insuficiente' });
 
     y = armarSeccionEstado_(doc, y, diagnostico, banda);
     y += 4;
