@@ -104,8 +104,17 @@ function renderBloque() {
   const colorBloque = PALETA_BLOQUES[BLOQUE_ACTUAL % PALETA_BLOQUES.length];
   const preguntasVisibles = bloque.preguntas.filter(condicionSatisfecha);
 
+  // Numeración global (no reinicia por bloque): cuenta las preguntas
+  // visibles de todos los bloques anteriores ya respondidos. Como los
+  // bloques previos ya fueron completados, sus condicionales ya están
+  // resueltos con las respuestas reales.
+  let numeroInicial = 1;
+  for (let i = 0; i < BLOQUE_ACTUAL; i++) {
+    numeroInicial += CONFIG.bloques[i].preguntas.filter(condicionSatisfecha).length;
+  }
+
   document.getElementById('contenidoBloque').innerHTML =
-    preguntasVisibles.map(p => renderPregunta(p, colorBloque)).join('');
+    preguntasVisibles.map((p, i) => renderPregunta(p, colorBloque, numeroInicial + i)).join('');
 
   attachEventos(preguntasVisibles);
 
@@ -118,15 +127,17 @@ function iconoCard(color) {
   return `<span class="pregunta-icono" style="background:${color}">?</span>`;
 }
 
-function renderPregunta(p, colorBloque) {
+function renderPregunta(p, colorBloque, numero) {
   const r = getRespuesta(p.id);
+  const estiloCard = `style="--color-bloque:${colorBloque}"`;
+  const numeroHtml = `<span class="pregunta-numero">Pregunta ${numero}</span>`;
 
   if (p.tipo === 'abierta') {
     return `
-      <div class="pregunta-card" data-pregunta="${p.id}">
+      <div class="pregunta-card" data-pregunta="${p.id}" ${estiloCard}>
         <div class="pregunta-card-cabecera">
           ${iconoCard(colorBloque)}
-          <p class="pregunta-texto">${p.texto}</p>
+          <div>${numeroHtml}<p class="pregunta-texto">${p.texto}</p></div>
         </div>
         <input type="text" data-input-texto="${p.id}" value="${escapeAttr(r.valorTexto)}" placeholder="Escribí acá...">
       </div>`;
@@ -134,10 +145,10 @@ function renderPregunta(p, colorBloque) {
 
   if (p.tipo === 'escala') {
     return `
-      <div class="pregunta-card" data-pregunta="${p.id}">
+      <div class="pregunta-card" data-pregunta="${p.id}" ${estiloCard}>
         <div class="pregunta-card-cabecera">
           ${iconoCard(colorBloque)}
-          <p class="pregunta-texto">${p.texto}</p>
+          <div>${numeroHtml}<p class="pregunta-texto">${p.texto}</p></div>
         </div>
         <div class="opciones-cards escala-opciones">
           ${[1, 2, 3, 4, 5].map(n => `
@@ -172,10 +183,10 @@ function renderPregunta(p, colorBloque) {
     </div>` : '';
 
   return `
-    <div class="pregunta-card" data-pregunta="${p.id}">
+    <div class="pregunta-card" data-pregunta="${p.id}" ${estiloCard}>
       <div class="pregunta-card-cabecera">
         ${iconoCard(colorBloque)}
-        <p class="pregunta-texto">${p.texto}${contador}</p>
+        <div>${numeroHtml}<p class="pregunta-texto">${p.texto}${contador}</p></div>
       </div>
       <div class="opciones-cards tipo-${p.tipo}">${opcionesHtml}</div>
       ${otroHtml}
@@ -326,8 +337,15 @@ function esOpcionOtro(idPregunta, idOpcion) {
 
 async function enviarDiagnostico() {
   const btn = document.getElementById('btnSiguiente');
+  const btnAnterior = document.getElementById('btnAnterior');
+  const overlay = document.getElementById('overlayProcesando');
+
+  // Estado explícito de procesamiento: bloquea envío doble (botones
+  // deshabilitados) y deja visualmente claro que hay que esperar, en vez
+  // de un simple cambio de texto en el botón.
   btn.disabled = true;
-  btn.textContent = 'Enviando...';
+  if (btnAnterior) btnAnterior.disabled = true;
+  overlay.classList.add('visible');
 
   const payload = {
     version: CONFIG.version,
@@ -343,19 +361,24 @@ async function enviarDiagnostico() {
   try {
     const res = await apiPost('guardarEnvioDiagnostico', payload);
     if (res.ok) {
+      // El overlay queda visible a propósito hasta que la navegación
+      // ocurra — comunica "esperá, ya casi" en vez de parpadear y cortar.
       const q = new URLSearchParams();
       Object.keys(res.puntajes || {}).forEach(cat => q.set(cat, res.puntajes[cat]));
       if (res.nivelUrgencia) q.set('NivelUrgencia', res.nivelUrgencia);
       window.location.href = `resultado.html?${q.toString()}`;
-    } else {
-      mostrarErrorEnvio(res.error);
+      return;
     }
+    mostrarErrorEnvio(res.error);
   } catch (err) {
     mostrarErrorEnvio();
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Enviar diagnóstico ✓';
   }
+
+  // Solo se llega acá si hubo error (en éxito ya navegó y salió de la
+  // función): recién ahí se libera el overlay y los botones para reintentar.
+  overlay.classList.remove('visible');
+  btn.disabled = false;
+  if (btnAnterior) btnAnterior.disabled = false;
 }
 
 function mostrarErrorEnvio(texto) {
