@@ -66,14 +66,36 @@ const PDFDiagnostico = (function () {
     Conversión: 'Facilita el contacto'
   };
 
-  // SUPUESTO: etiqueta cliente para el estado de cada barra de progreso
-  // (V3 — no reemplaza al valor numérico, que nunca se muestra). Ajustar
-  // si el copy final define otra terminología.
-  function etiquetaEstadoValor_(valor) {
+  // Vocabulario definitivo por atributo (aprobado) — cada atributo tiene
+  // sus propias 3 palabras, ninguna se repite entre atributos, para que
+  // nunca vuelva a leerse "Presencia: Completo" como si el canal ya
+  // estuviera resuelto. Nunca se muestra el valor numérico.
+  function etiquetaExistencia_(valor) {
+    if (valor === null || valor === undefined) return '';
+    if (valor >= 0.99) return 'Existe';
+    if (valor > 0) return 'Existe parcialmente';
+    return 'No existe';
+  }
+
+  function etiquetaCompletitud_(valor) {
     if (valor === null || valor === undefined) return '';
     if (valor >= 0.99) return 'Completo';
     if (valor > 0) return 'Parcial';
-    return 'Pendiente';
+    return 'Sin completar';
+  }
+
+  function etiquetaConversion_(valor) {
+    if (valor === null || valor === undefined) return '';
+    if (valor >= 0.99) return 'Preparado';
+    if (valor > 0) return 'Parcialmente preparado';
+    return 'Sin preparar';
+  }
+
+  function etiquetaEstadoAtributo_(idAtributo, valor) {
+    if (idAtributo === 'Existencia') return etiquetaExistencia_(valor);
+    if (idAtributo === 'Completitud') return etiquetaCompletitud_(valor);
+    if (idAtributo === 'Conversión') return etiquetaConversion_(valor);
+    return '';
   }
 
   const ORDEN_GRAVEDAD = { Alta: 0, Media: 1, Baja: 2 };
@@ -153,6 +175,53 @@ const PDFDiagnostico = (function () {
     doc.setLineWidth(0.8);
     doc.line(cx - 1.3, cy, cx - 0.3, cy + 1.2);
     doc.line(cx - 0.3, cy + 1.2, cx + 1.6, cy - 1.3);
+  }
+
+  // Indicador de Presencia (Alternativa C — aprobada): 3 estados, sin
+  // barra. "Existe" y "No existe" son prácticamente binarios en la
+  // mayoría de los canales; "Existe parcialmente" cubre el caso real de
+  // Contacto y Conversión (ej. tiene WhatsApp pero no teléfono). Todo
+  // dibujado con líneas/curvas, mismo criterio que dibujarIconoCheck_.
+  function dibujarIndicadorExistencia_(doc, cx, cy, valor) {
+    const r = 2.6;
+
+    if (valor >= 0.99) {
+      // Existe: círculo lleno + check blanco.
+      doc.setFillColor(...COLOR_PRESENCIA);
+      doc.circle(cx, cy, r, 'F');
+      doc.setDrawColor(255, 255, 255);
+      doc.setLineWidth(0.7);
+      doc.line(cx - 1.1, cy, cx - 0.2, cy + 1);
+      doc.line(cx - 0.2, cy + 1, cx + 1.3, cy - 1.1);
+      return;
+    }
+
+    if (valor > 0) {
+      // Existe parcialmente: medio círculo relleno (mitad izquierda),
+      // aproximado con 2 curvas Bézier de cuarto de círculo (k=0.5523),
+      // más el borde completo en color track para que se lea como un
+      // círculo entero medio lleno, no como una forma cortada.
+      doc.setDrawColor(...COLOR_TRACK);
+      doc.setLineWidth(0.6);
+      doc.circle(cx, cy, r, 'S');
+
+      const k = r * 0.5523;
+      doc.setFillColor(...COLOR_PRESENCIA);
+      doc.lines(
+        [
+          [-k, 0, -r, r * 0.4477, -r, r],
+          [0, k, r * 0.4477, r, r, r]
+        ],
+        cx, cy - r,
+        [1, 1], 'F', true
+      );
+      return;
+    }
+
+    // No existe: anillo vacío (solo contorno), sin relleno.
+    doc.setDrawColor(...COLOR_MUTED_PDF);
+    doc.setLineWidth(0.6);
+    doc.circle(cx, cy, r, 'S');
   }
 
   // Chip de gravedad, alineado a la derecha de xDerecha.
@@ -452,25 +521,37 @@ const PDFDiagnostico = (function () {
 
     atributosVisibles.forEach(attr => {
       const label = ATRIBUTOS_LABEL[attr.idAtributo] || attr.idAtributo;
-      const color = colorPorAtributo_(attr.idAtributo);
-      const anchoFill = anchoBarraMax * Math.max(0, Math.min(attr.valor, 1));
-      const estado = etiquetaEstadoValor_(attr.valor);
+      const estado = etiquetaEstadoAtributo_(attr.idAtributo, attr.valor);
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(...COLOR_TEXT_PDF);
       doc.text(label, x + 7, yAtributo - 1.5);
 
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
-      doc.setTextColor(...COLOR_MUTED_PDF);
-      doc.text(estado, x + 7 + anchoBarraMax, yAtributo - 1.5, { align: 'right' });
+      if (attr.idAtributo === 'Existencia') {
+        // Presencia: indicador de estado, sin barra (Alternativa C).
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(...COLOR_TEXT_PDF);
+        doc.text(estado, x + 7 + anchoBarraMax - 6, yAtributo - 1.5, { align: 'right' });
+        dibujarIndicadorExistencia_(doc, x + 7 + anchoBarraMax - 2.6, yAtributo - 3.5, attr.valor);
+      } else {
+        // Completitud / Conversión: mantienen la barra, con su propio
+        // vocabulario (nunca "Completo" genérico compartido entre los tres).
+        const color = colorPorAtributo_(attr.idAtributo);
+        const anchoFill = anchoBarraMax * Math.max(0, Math.min(attr.valor, 1));
 
-      doc.setFillColor(...COLOR_TRACK);
-      doc.roundedRect(x + 7, yAtributo, anchoBarraMax, 3.5, 1.2, 1.2, 'F');
-      if (attr.valor > 0) {
-        doc.setFillColor(...color);
-        doc.roundedRect(x + 7, yAtributo, anchoFill, 3.5, 1.2, 1.2, 'F');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...COLOR_MUTED_PDF);
+        doc.text(estado, x + 7 + anchoBarraMax, yAtributo - 1.5, { align: 'right' });
+
+        doc.setFillColor(...COLOR_TRACK);
+        doc.roundedRect(x + 7, yAtributo, anchoBarraMax, 3.5, 1.2, 1.2, 'F');
+        if (attr.valor > 0) {
+          doc.setFillColor(...color);
+          doc.roundedRect(x + 7, yAtributo, anchoFill, 3.5, 1.2, 1.2, 'F');
+        }
       }
 
       yAtributo += ALTO_POR_ATRIBUTO;
