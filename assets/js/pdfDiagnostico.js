@@ -312,27 +312,52 @@ const PDFDiagnostico = (function () {
 
   const NIVELES_ESCALA = ['Arrancando', 'En desarrollo', 'Consolidado', 'Avanzado'];
 
+  // Identidad cromática propia por etapa (V3 corrección) — los tramos
+  // alcanzados ya no comparten un único color plano: cada etapa recorrida
+  // usa su propio tono (progresión de intensidad, misma familia semántica
+  // que el resto del informe), y el nivel actual queda como protagonista
+  // (color pleno + texto bold + marcador). Los tramos futuros quedan en
+  // COLOR_TRACK, sin cambios.
+  const COLORES_ETAPA = [
+    [156, 176, 246], // Arrancando — tono más claro de la familia Accent
+    [110, 138, 244], // En desarrollo
+    [75, 110, 240],  // Consolidado — = COLOR_PRESENCIA
+    [47, 79, 199]    // Avanzado — más saturado, cierre de la escala
+  ];
+
   function dibujarEscalaMadurez_(doc, y, nivelActual) {
     const anchoPagina = doc.internal.pageSize.getWidth();
     const anchoTotal = anchoPagina - 30;
+    const gap = 3;
     const anchoSegmento = anchoTotal / NIVELES_ESCALA.length;
+    const anchoBarra = anchoSegmento - gap;
     const indiceActual = NIVELES_ESCALA.indexOf(nivelActual);
 
     NIVELES_ESCALA.forEach((nivel, i) => {
       const x = 15 + i * anchoSegmento;
+      const centroX = x + anchoBarra / 2;
       const activo = i === indiceActual;
       const alcanzado = indiceActual >= 0 && i <= indiceActual;
 
-      doc.setFillColor(...(alcanzado ? COLOR_PRESENCIA : COLOR_TRACK));
-      doc.roundedRect(x, y, anchoSegmento - 3, 4, 1.2, 1.2, 'F');
+      doc.setFillColor(...(alcanzado ? COLORES_ETAPA[i] : COLOR_TRACK));
+      doc.roundedRect(x, y, anchoBarra, activo ? 5.5 : 4, 1.4, 1.4, 'F');
 
+      // Etiqueta centrada en su propio tramo, con wrap a 2 líneas si el
+      // ancho disponible no alcanza a 7.5pt — nunca se deja desbordar
+      // hacia el tramo vecino.
       doc.setFont('helvetica', activo ? 'bold' : 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(...(activo ? COLOR_TEXT_PDF : COLOR_MUTED_PDF));
-      doc.text(nivel, x, y + 9);
+      const lineas = doc.splitTextToSize(nivel, anchoBarra + 1);
+      lineas.forEach((linea, li) => {
+        doc.text(linea, centroX, y + 9 + li * 3.6, { align: 'center' });
+      });
     });
 
-    return y + 16;
+    // +4 de aire extra si alguna etiqueta necesitó 2 líneas, para no pisar
+    // el contenido siguiente.
+    const maxLineas = Math.max(...NIVELES_ESCALA.map(n => doc.splitTextToSize(n, anchoBarra + 1).length));
+    return y + 16 + (maxLineas > 1 ? 4 : 0);
   }
 
   function armarSeccionEstado_(doc, y, diagnostico, banda) {
@@ -568,8 +593,29 @@ const PDFDiagnostico = (function () {
       return y + 10;
     }
 
+    // Límite físico real de la página (A4 = 297mm), con margen para no
+    // pisar el pie. Cada oportunidad es una unidad indivisible: se mide
+    // su alto real ANTES de dibujar nada, y si no entra completa en lo
+    // que queda de página, se pasa entera a la siguiente — nunca se
+    // empieza a dibujar sin saber si termina.
+    const LIMITE_INFERIOR = 278;
+
     oportunidadesResueltas.forEach((op, i) => {
-      y = saltoPaginaSiHaceFalta_(doc, y, 250);
+      const esUltima = i === oportunidadesResueltas.length - 1;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      const lineasDescripcion = op.descripcion ? doc.splitTextToSize(op.descripcion, 163) : [];
+
+      const altoItem =
+        9 + // título / badge / número
+        (lineasDescripcion.length ? 5 * lineasDescripcion.length : 0) +
+        5 + (esUltima ? 2 : 7); // aire + separador (o cierre si es la última)
+
+      if (y + altoItem > LIMITE_INFERIOR) {
+        doc.addPage();
+        y = 20;
+      }
 
       const numero = String(i + 1).padStart(2, '0');
       const centroX = 19;
@@ -592,18 +638,16 @@ const PDFDiagnostico = (function () {
 
       y += 9;
 
-      if (op.descripcion) {
+      if (lineasDescripcion.length) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(...COLOR_MUTED_PDF);
-        const lineas = doc.splitTextToSize(op.descripcion, 163);
-        doc.text(lineas, 30, y);
-        y += 5 * lineas.length;
+        doc.text(lineasDescripcion, 30, y);
+        y += 5 * lineasDescripcion.length;
       }
 
       y += 5;
 
-      const esUltima = i === oportunidadesResueltas.length - 1;
       if (!esUltima) {
         doc.setDrawColor(...COLOR_CARD_BORDER);
         doc.setLineWidth(0.2);
@@ -779,6 +823,14 @@ const PDFDiagnostico = (function () {
     if (banda !== 'insuficiente') {
       const { oportunidadesResueltas, serviciosResueltos } =
         resolverOportunidadesYServicios_(diagnostico, catalogoOportunidades, catalogoServicios);
+
+      // Salto de página FORZADO (no condicional): la primera página
+      // siempre termina en Membrete + Identificación + Madurez Digital +
+      // Situación por canal; "Oportunidades detectadas" siempre arranca
+      // en la segunda página.
+      doc.addPage();
+      y = 20;
+
       y = armarSeccionOportunidades_(doc, y, oportunidadesResueltas);
       y += 2;
       y = armarSeccionServicios_(doc, y, serviciosResueltos);
