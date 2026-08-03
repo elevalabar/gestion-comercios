@@ -846,7 +846,7 @@ document.getElementById('btnSubirArchivo').addEventListener('click', async () =>
 
 function badgeClaseInspeccion(estado) {
   if (estado === 'Finalizada') return 'badge-baja';
-  if (estado === 'Omitida') return 'badge-baja';
+  if (estado === 'Omitida') return 'badge-omitida';
   return 'badge-media';
 }
 
