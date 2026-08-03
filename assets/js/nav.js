@@ -7,12 +7,24 @@
 // ─────────────────────────────────────────────
 
 const SECCIONES = [
-  { id: 'panel',       label: 'Panel',       icon: '▦', href: 'panel/index.html' },
-  { id: 'comercios',   label: 'Comercios',   icon: '⌂', href: 'comercios/index.html' },
-  { id: 'prospector',  label: 'Prospector',  icon: '⌕', href: 'prospector/index.html' },
-  { id: 'seguimiento', label: 'Seguimiento', icon: '◷', href: 'seguimiento/index.html' },
-  { id: 'encuestas',   label: 'Encuestas',   icon: '📋', href: 'encuestas/index.html' }
+  { id: 'panel',       label: 'Panel',       href: 'panel/index.html' },
+  { id: 'comercios',   label: 'Comercios',   href: 'comercios/index.html' },
+  { id: 'prospector',  label: 'Prospector',  href: 'prospector/index.html' },
+  { id: 'seguimiento', label: 'Seguimiento', href: 'seguimiento/index.html' },
+  { id: 'encuestas',   label: 'Encuestas',   href: 'encuestas/index.html' }
 ];
+
+// Mismo lenguaje visual que ICONS en comercios/comercios.js (viewBox 24x24,
+// stroke currentColor, stroke-width 2, round caps) — para que la nav no se
+// sienta un set de iconos distinto del resto del producto.
+const ICONS_NAV = {
+  panel: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>',
+  comercios: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>',
+  prospector: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  seguimiento: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+  encuestas: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>',
+  config: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.4M12 18.6V21M4.9 6.3l1.7 1.4M17.4 16.3l1.7 1.4M4.9 17.7l1.7-1.4M17.4 7.7l1.7-1.4M3 12h2.4M18.6 12H21"/></svg>'
+};
 
 function inyectarEstilosNav() {
   if (document.getElementById('nav-styles')) return;
@@ -22,9 +34,9 @@ function inyectarEstilosNav() {
     .nav-top {
       display: flex; align-items: center; justify-content: space-between;
       padding: 12px 20px; border-bottom: 1px solid var(--border);
-      background: var(--bg-card);
+      background: var(--bg-card); gap: 12px;
     }
-    .nav-top .marca { display: flex; align-items: center; gap: 10px; }
+    .nav-top .marca { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
     .nav-top .logo-mini {
       width: 26px; height: 26px; border-radius: 50%;
       object-fit: cover;
@@ -37,27 +49,47 @@ function inyectarEstilosNav() {
     }
     .nav-top .enlaces a.activo { color: var(--text-primary); border-color: var(--accent); }
     .nav-top .enlaces a:hover { text-decoration: none; color: var(--text-primary); }
-    .nav-top .usuario { display: flex; align-items: center; gap: 12px; }
-    .nav-top .usuario span { font-size: 13px; color: var(--text-secondary); }
+    .nav-top .usuario { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .nav-top .usuario span {
+      font-size: 13px; color: var(--text-secondary);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+    }
     .nav-top .btn-logout {
       background: none; border: none; color: var(--text-secondary);
-      font-size: 12px; cursor: pointer; padding: 4px;
+      font-size: 12px; cursor: pointer; padding: 4px; flex-shrink: 0;
     }
     .nav-top .btn-logout:hover { color: var(--danger); }
+    .nav-top .btn-config { flex-shrink: 0; }
 
+    /* ── Nav inferior (mobile) ────────────────────────────────────
+       Cada item usa flex:1 (en vez de ancho por contenido con
+       space-around) para que los 6 accesos dividan el ancho
+       disponible de forma pareja y no puedan generar overflow
+       horizontal sin importar el largo de la etiqueta. */
     .nav-bottom {
       display: none;
       position: fixed; bottom: 0; left: 0; right: 0;
-      justify-content: space-around; align-items: center;
-      padding: 8px 0; border-top: 1px solid var(--border);
+      align-items: stretch;
+      padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0px));
+      border-top: 1px solid var(--border);
       background: var(--bg-card); z-index: 10;
+      box-shadow: 0 -2px 10px rgba(0,0,0,.08);
     }
-    .nav-bottom a {
-      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    .nav-bottom a, .nav-bottom .btn-config {
+      flex: 1; min-width: 0; min-height: 48px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+      padding: 4px 2px; border-radius: var(--radius-sm);
       font-size: 10px; color: var(--text-secondary); text-decoration: none;
     }
-    .nav-bottom a .icono { font-size: 17px; }
-    .nav-bottom a.activo { color: var(--accent); }
+    .nav-bottom a .icono, .nav-bottom .btn-config .icono {
+      display: flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 999px;
+    }
+    .nav-bottom a span:last-child, .nav-bottom .btn-config span:last-child {
+      max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .nav-bottom a.activo, .nav-bottom .btn-config.activo { color: var(--accent); }
+    .nav-bottom a.activo .icono, .nav-bottom .btn-config.activo .icono { background: var(--accent-soft); }
 
     /* Botón de Configuración — único acceso, evita llenar la nav de
        botones sueltos. Hoy solo contiene Apariencia; Admin/Configuración
@@ -67,8 +99,6 @@ function inyectarEstilosNav() {
       font-size: 15px; cursor: pointer; padding: 4px; line-height: 1;
     }
     .btn-config:hover { color: var(--text-primary); }
-    .nav-bottom .btn-config { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; }
-    .nav-bottom .btn-config .icono { font-size: 17px; }
 
     .menu-config {
       position: absolute; min-width: 190px;
@@ -138,8 +168,9 @@ function inyectarEstilosNav() {
 
     @media (max-width: 640px) {
       .nav-top .enlaces { display: none; }
+      .nav-top .btn-config { display: none; } /* ya está disponible en nav-bottom, evita duplicarlo */
       .nav-bottom { display: flex; }
-      body { padding-bottom: 60px; }
+      body { padding-bottom: 68px; }
     }
   `;
   document.head.appendChild(style);
@@ -181,15 +212,25 @@ function construirMenuConfig_(idBoton) {
 
   function posicionar() {
     const r = boton.getBoundingClientRect();
-    menu.style.top = (r.bottom + window.scrollY + 6) + 'px';
+    const anchoMenu = menu.offsetWidth;
+    const altoMenu = menu.offsetHeight;
+    const anchoViewport = document.documentElement.clientWidth;
+    const altoViewport = document.documentElement.clientHeight;
+
+    // Si no entra debajo del botón (típicamente el botón del nav-bottom,
+    // pegado al borde inferior de la pantalla), lo abrimos hacia arriba.
+    const entraAbajo = r.bottom + 6 + altoMenu <= altoViewport;
+    const top = entraAbajo
+      ? r.bottom + window.scrollY + 6
+      : r.top + window.scrollY - altoMenu - 6;
+    menu.style.top = Math.max(8, top) + 'px';
+
     // Alineado al borde derecho del botón, sin salirse de la pantalla en
     // ningún borde. IMPORTANTE: esto se llama con el menú ya visible
     // (clase "abierto" ya puesta) — offsetWidth de un elemento con
     // display:none siempre da 0, y ese 0 era la causa real del overflow
     // horizontal (el menú se anclaba al borde derecho del botón en vez
     // de restarle su ancho real).
-    const anchoMenu = menu.offsetWidth;
-    const anchoViewport = document.documentElement.clientWidth;
     const izquierdaDeseada = r.right + window.scrollX - anchoMenu;
     const izquierdaMaxima = window.scrollX + anchoViewport - anchoMenu - 8;
     menu.style.left = Math.max(8, Math.min(izquierdaDeseada, izquierdaMaxima)) + 'px';
@@ -413,12 +454,12 @@ function renderNav(seccionActiva, base) {
     bottom.className = 'nav-bottom';
     bottom.innerHTML = SECCIONES.map(s => `
       <a href="${base}${s.href}" class="${s.id === seccionActiva ? 'activo' : ''}">
-        <span class="icono">${s.icon}</span>
+        <span class="icono">${ICONS_NAV[s.id]}</span>
         <span>${s.label}</span>
       </a>
     `).join('') + `
       <button class="btn-config" id="btnConfigBottom" title="Configuración" aria-label="Configuración">
-        <span class="icono">⚙️</span>
+        <span class="icono">${ICONS_NAV.config}</span>
         <span>Config.</span>
       </button>
     `;
