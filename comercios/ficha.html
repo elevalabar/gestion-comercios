@@ -18,6 +18,10 @@
   @media (max-width: 640px) {
     .form-grid { grid-template-columns: 1fr; }
   }
+  /* .flex-between (definida en base.css) no envuelve por defecto: en textos largos
+     (nombre de comercio, títulos de tabs junto a botones) eso fuerza scroll horizontal
+     de toda la página. Acá permitimos que envuelva en vez de desbordar. */
+  .flex-between { flex-wrap: wrap; gap: 8px; row-gap: 6px; }
   .seccion { margin-top: 20px; }
   .seccion h3 { margin-bottom: 12px; }
 
@@ -156,7 +160,7 @@
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
 
-  .score-card { display: flex; gap: 20px; align-items: center; margin-bottom: 4px; }
+  .score-card { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; margin-bottom: 4px; }
   .score-circulo {
     flex-shrink: 0; width: 90px; height: 90px; border-radius: 50%;
     border: 6px solid var(--accent); display: flex; flex-direction: column;
@@ -189,7 +193,7 @@
   .diagnostico-canal:last-child { margin-bottom: 0; }
   .diagnostico-canal-header {
     display: flex; justify-content: space-between; align-items: baseline;
-    margin-bottom: 10px;
+    flex-wrap: wrap; row-gap: 4px; margin-bottom: 10px;
   }
   .diagnostico-canal-header h4 { margin: 0; font-size: 14px; }
   .diagnostico-canal-header .cobertura { font-size: 12px; color: var(--text-muted); }
@@ -197,7 +201,7 @@
   .diagnostico-atributo-fila { margin-bottom: 10px; }
   .diagnostico-atributo-fila:last-child { margin-bottom: 0; }
   .diagnostico-atributo-label {
-    display: flex; justify-content: space-between; font-size: 12px;
+    display: flex; justify-content: space-between; flex-wrap: wrap; row-gap: 2px; font-size: 12px;
     color: var(--text-secondary); margin-bottom: 4px;
   }
   .diagnostico-atributo-label .no-aplica { color: var(--text-muted); font-style: italic; }
