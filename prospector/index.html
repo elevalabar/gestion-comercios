@@ -76,6 +76,7 @@
   .mapeo-chip.sin-detectar .valor { color: var(--text-muted); font-weight: 400; }
 
   /* ── Tabla (mismo patrón que Encuestas) ─────────────────────── */
+  .tabla-wrap { overflow-x: auto; }
   table.tabla-prospector { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
   .tabla-prospector col.col-img      { width: 56px; }
   .tabla-prospector col.col-nombre   { width: 20%; }
@@ -145,6 +146,9 @@
 
   @media (max-width: 640px) {
     .stats-header { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 480px) {
+    .filtros-barra select { flex: 1 1 100%; }
   }
 </style>
 </head>
