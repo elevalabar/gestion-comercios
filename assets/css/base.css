@@ -83,8 +83,9 @@ button, .btn {
   font-family: inherit;
   transition: opacity 0.15s ease;
 }
-button:hover, .btn:hover { opacity: 0.85; }
-button:active, .btn:active { transform: scale(0.98); }
+button:hover:not(:disabled), .btn:hover:not(:disabled) { opacity: 0.85; }
+button:active:not(:disabled), .btn:active:not(:disabled) { transform: scale(0.98); }
+button:disabled, .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-primary {
   background: var(--accent);
@@ -106,6 +107,7 @@ button:active, .btn:active { transform: scale(0.98); }
 .badge-media   { background: var(--warning-soft); color: var(--warning); }
 .badge-baja    { background: var(--bg-card-alt); color: var(--text-secondary); }
 .badge-cliente { background: var(--success-soft); color: var(--success); }
+.badge-omitida { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
 
 /* Mensajes de error / estado */
 .mensaje-error {
