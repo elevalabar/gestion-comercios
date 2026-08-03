@@ -83,14 +83,14 @@ function inyectarEstilosNav() {
     }
     .menu-config .opcion-tema {
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
-      padding: 8px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--text-primary);
+      padding: 8px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; color: var(--text-primary);
     }
     .menu-config .opcion-tema:hover { background: var(--bg-card-alt); }
     .menu-config .opcion-tema .marca-check { font-size: 12px; color: var(--accent); visibility: hidden; }
     .menu-config .opcion-tema.activa .marca-check { visibility: visible; }
     .menu-config .separador-menu { height: 1px; background: var(--border); margin: 6px 2px; }
     .menu-config .opcion-menu {
-      padding: 8px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--text-primary);
+      padding: 8px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; color: var(--text-primary);
     }
     .menu-config .opcion-menu:hover { background: var(--bg-card-alt); }
 
@@ -102,7 +102,7 @@ function inyectarEstilosNav() {
     }
     .overlay-modal.abierto { display: flex; }
     .modal-marca {
-      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg, 14px);
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
       width: 100%; max-width: 420px; max-height: calc(100vh - 32px); overflow-y: auto;
       padding: 22px; box-shadow: 0 12px 32px rgba(0,0,0,.28);
     }
@@ -111,8 +111,7 @@ function inyectarEstilosNav() {
     .modal-marca .campo { margin-bottom: 14px; }
     .modal-marca label { display: block; font-size: 12.5px; color: var(--text-secondary); margin-bottom: 5px; }
     .modal-marca input[type="text"] {
-      width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--border);
-      background: var(--bg-input); color: var(--text-primary); font-size: 13.5px; box-sizing: border-box;
+      padding: 9px 10px; border-radius: var(--radius-sm); font-size: 13.5px;
     }
     .modal-marca .fila-toggle {
       display: flex; align-items: center; justify-content: space-between;
