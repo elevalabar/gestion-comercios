@@ -20,8 +20,8 @@
     gap: 12px;
     margin: 20px 0;
   }
-  .stat-card p.label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
-  .stat-card p.valor { font-size: 22px; font-weight: 500; }
+  .stat-card p.stat-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .stat-card p.stat-valor { font-size: 24px; font-weight: 500; }
   .fila-comercio {
     display: flex; justify-content: space-between; align-items: center;
     padding: 12px 0; border-bottom: 1px solid var(--border);
@@ -46,10 +46,10 @@
   <p class="muted">Resumen general de comercios relevados.</p>
 
   <div class="stats" id="stats">
-    <div class="card stat-card"><p class="label">Comercios</p><p class="valor" id="statTotal">–</p></div>
-    <div class="card stat-card"><p class="label">En seguimiento</p><p class="valor" id="statSeguimiento">–</p></div>
-    <div class="card stat-card"><p class="label">Clientes</p><p class="valor" id="statClientes">–</p></div>
-    <div class="card stat-card"><p class="label">Prioridad alta</p><p class="valor" id="statAlta">–</p></div>
+    <div class="card stat-card"><p class="stat-label">Comercios</p><p class="stat-valor" id="statTotal">–</p></div>
+    <div class="card stat-card"><p class="stat-label">En seguimiento</p><p class="stat-valor" id="statSeguimiento">–</p></div>
+    <div class="card stat-card"><p class="stat-label">Clientes</p><p class="stat-valor" id="statClientes">–</p></div>
+    <div class="card stat-card"><p class="stat-label">Prioridad alta</p><p class="stat-valor" id="statAlta">–</p></div>
   </div>
 
   <div class="card">
