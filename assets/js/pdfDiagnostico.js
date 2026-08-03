@@ -62,7 +62,7 @@ const PDFDiagnostico = (function () {
   // especificación; ajustar acá si el copy real difiere.
   const ATRIBUTOS_LABEL = {
     Existencia: 'Presencia',
-    Completitud: 'Información completa',
+    Completitud: 'Información cargada',
     Conversión: 'Facilita el contacto'
   };
 
@@ -329,14 +329,45 @@ const PDFDiagnostico = (function () {
   // sin agregar ni inventar ningún dato nuevo.
   // ───────────────────────────────────────────
 
+  // Formatea un teléfono argentino SOLO para mostrarlo en el PDF — nunca
+  // toca comercio['Teléfono'], que sigue viajando crudo a donde
+  // corresponda. Heurística: 10 dígitos empezando en "11" (CABA/GBA) →
+  // "11 XXXX-XXXX"; otros 10 dígitos → se asume código de área de 3
+  // (patrón más común en el resto del país) → "XXX XXX-XXXX". Cualquier
+  // otro largo/formato se devuelve tal cual, para no mostrar un número
+  // mal cortado por una heurística que no le corresponde.
+  function formatearTelefonoArgentino_(valor) {
+    if (!valor) return '';
+    const digitos = String(valor).replace(/\D/g, '');
+    if (digitos.length !== 10) return valor;
+    if (digitos.startsWith('11')) {
+      return `${digitos.slice(0, 2)} ${digitos.slice(2, 6)}-${digitos.slice(6)}`;
+    }
+    return `${digitos.slice(0, 3)} ${digitos.slice(3, 6)}-${digitos.slice(6)}`;
+  }
+
   function dibujarTarjetaComercio_(doc, y, comercio, opciones) {
     const amplia = !!(opciones && opciones.amplia);
-    const alto = amplia ? 40 : 34;
+    const xTexto = 22;
+
+    const rubroCategoria = [comercio && comercio.Rubro].filter(Boolean).join(' · ');
+    const direccion = (comercio && comercio['Dirección']) || '';
+    const telefono = formatearTelefonoArgentino_((comercio && comercio['Teléfono']) || '');
+    const redes = [comercio && comercio.Instagram, comercio && comercio['Sitio web']].filter(Boolean).join('  ·  ');
+    const lineasContacto = [direccion, telefono, redes].filter(Boolean).length;
+
+    // Alto dinámico: la base fija alcanzaba para nombre + categoría + una
+    // sola línea de contacto corrida. Con Dirección y Teléfono ahora en
+    // líneas propias, el contenido puede necesitar más alto — se calcula
+    // antes de dibujar el fondo para que la tarjeta nunca quede chica.
+    const altoBase = amplia ? 40 : 34;
+    const altoContenido = 13 + (rubroCategoria ? 6 : 0) + 2 + lineasContacto * 5.5 + 4;
+    const alto = Math.max(altoBase, altoContenido);
+
     // Futuro: si comercio.logoUrl (o campo equivalente) existiera, acá es
     // donde se dibujaría con doc.addImage, corriendo xTexto como se hace
     // en dibujarMembrete_ con el logo de Eleva Lab. No se implementa ahora.
     const anchoCaja = dibujarTarjetaFondo_(doc, y, alto);
-    const xTexto = 22;
     let yTexto = y + 11;
 
     doc.setFont('helvetica', 'bold');
@@ -345,7 +376,6 @@ const PDFDiagnostico = (function () {
     doc.text((comercio && comercio.Nombre) || 'Comercio sin nombre', xTexto, yTexto);
     yTexto += 7;
 
-    const rubroCategoria = [comercio && comercio.Rubro].filter(Boolean).join(' · ');
     if (rubroCategoria) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
@@ -354,21 +384,26 @@ const PDFDiagnostico = (function () {
       yTexto += 6;
     }
 
-    // Datos de contacto disponibles — se listan solo los que existen,
-    // nunca un campo vacío ni un placeholder.
-    const contacto = [];
-    if (comercio) {
-      if (comercio['Dirección']) contacto.push(comercio['Dirección']);
-      if (comercio['Teléfono']) contacto.push(comercio['Teléfono']);
-      if (comercio.Instagram) contacto.push(comercio.Instagram);
-      if (comercio['Sitio web']) contacto.push(comercio['Sitio web']);
+    yTexto += 2; // aire antes de los datos de contacto
+
+    // Dirección y Teléfono: líneas propias con etiqueta — antes iban
+    // corridos en un solo renglón separados por "·" y el teléfono no se
+    // identificaba como tal.
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...COLOR_MUTED_PDF);
+
+    if (direccion) {
+      doc.text(`Dirección: ${direccion}`, xTexto, yTexto);
+      yTexto += 5.5;
     }
-    if (contacto.length > 0) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
-      doc.setTextColor(...COLOR_MUTED_PDF);
-      const lineas = doc.splitTextToSize(contacto.join('  ·  '), anchoCaja - 14);
-      doc.text(lineas, xTexto, yTexto);
+    if (telefono) {
+      doc.text(`Teléfono: ${telefono}`, xTexto, yTexto);
+      yTexto += 5.5;
+    }
+    if (redes) {
+      doc.text(redes, xTexto, yTexto);
+      yTexto += 5.5;
     }
 
     return y + alto + 10;
@@ -396,14 +431,18 @@ const PDFDiagnostico = (function () {
 
   function dibujarEscalaMadurez_(doc, y, nivelActual) {
     const anchoPagina = doc.internal.pageSize.getWidth();
-    const anchoTotal = anchoPagina - 30;
+    // Inset interno simétrico (izquierda = derecha) para que ningún tramo
+    // quede pegado al borde de la tarjeta — antes la escala ocupaba
+    // exactamente el ancho de la caja, sin aire propio.
+    const INSET_INTERNO = 5;
+    const anchoTotal = anchoPagina - 30 - INSET_INTERNO * 2;
     const gap = 3;
     const anchoSegmento = anchoTotal / NIVELES_ESCALA.length;
     const anchoBarra = anchoSegmento - gap;
     const indiceActual = NIVELES_ESCALA.indexOf(nivelActual);
 
     NIVELES_ESCALA.forEach((nivel, i) => {
-      const x = 15 + i * anchoSegmento;
+      const x = 15 + INSET_INTERNO + i * anchoSegmento;
       const centroX = x + anchoBarra / 2;
       const activo = i === indiceActual;
       const alcanzado = indiceActual >= 0 && i <= indiceActual;
@@ -471,7 +510,7 @@ const PDFDiagnostico = (function () {
 
     if (banda === 'preliminar') {
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
+      doc.setFontSize(9.5);
       doc.setTextColor(...COLOR_MUTED_PDF);
       const lineas = doc.splitTextToSize(
         'Este informe corresponde a un primer relevamiento. Algunas áreas requieren una revisión más profunda para completar el diagnóstico.',
@@ -493,7 +532,7 @@ const PDFDiagnostico = (function () {
   // que ambas midan lo mismo.
   // ───────────────────────────────────────────
 
-  const BASE_ALTO_CANAL = 16;
+  const BASE_ALTO_CANAL = 19; // +3 vs. antes, compensa el mayor gap bajo el nombre del canal
   const ALTO_POR_ATRIBUTO = 13; // antes 11 — +2 para la etiqueta de estado de la barra
 
   function atributosVisiblesDeCanal_(canal) {
@@ -516,7 +555,7 @@ const PDFDiagnostico = (function () {
     doc.setTextColor(...COLOR_TEXT_PDF);
     doc.text(nombreCanal, x + 7, y + 11);
 
-    let yAtributo = y + 20;
+    let yAtributo = y + 23; // +3 vs. antes, más aire entre el nombre del canal y los atributos
     const anchoBarraMax = ancho - 20;
 
     atributosVisibles.forEach(attr => {
@@ -530,11 +569,21 @@ const PDFDiagnostico = (function () {
 
       if (attr.idAtributo === 'Existencia') {
         // Presencia: indicador de estado, sin barra (Alternativa C).
+        // Ícono a una distancia fija del borde derecho, con un espacio
+        // horizontal propio (4mm) antes del texto — antes texto e ícono
+        // quedaban prácticamente pegados para estados largos como
+        // "Existe parcialmente".
+        const iconoR = 2.6;
+        const iconoCx = x + 7 + anchoBarraMax - iconoR - 1;
+        const textoDerecha = iconoCx - iconoR - 4;
+
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
         doc.setTextColor(...COLOR_TEXT_PDF);
-        doc.text(estado, x + 7 + anchoBarraMax - 6, yAtributo - 1.5, { align: 'right' });
-        dibujarIndicadorExistencia_(doc, x + 7 + anchoBarraMax - 2.6, yAtributo - 3.5, attr.valor);
+        doc.text(estado, textoDerecha, yAtributo - 1.5, { align: 'right' });
+        // Centro vertical del ícono alineado con el centro del texto
+        // (mismo criterio que dibujarChipGravedad_ usa para sus chips).
+        dibujarIndicadorExistencia_(doc, iconoCx, yAtributo - 3.3, attr.valor);
       } else {
         // Completitud / Conversión: mantienen la barra, con su propio
         // vocabulario (nunca "Completo" genérico compartido entre los tres).
@@ -664,7 +713,7 @@ const PDFDiagnostico = (function () {
     doc.setFontSize(12);
     doc.setTextColor(...COLOR_TEXT_PDF);
     doc.text('Oportunidades detectadas', 15, y);
-    y += 9;
+    y += 13; // +4 vs. antes — más jerarquía entre el título de sección y el primer bloque
 
     if (oportunidadesResueltas.length === 0) {
       doc.setFont('helvetica', 'normal');
@@ -681,12 +730,18 @@ const PDFDiagnostico = (function () {
     // empieza a dibujar sin saber si termina.
     const LIMITE_INFERIOR = 278;
 
+    // Columna común de texto (título + descripción): más separada del
+    // círculo/número que antes, para que 01 se lea como badge asociado al
+    // bloque y no como parte pegada del título.
+    const xTexto = 33;
+    const anchoTexto = anchoPagina - xTexto - 15;
+
     oportunidadesResueltas.forEach((op, i) => {
       const esUltima = i === oportunidadesResueltas.length - 1;
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      const lineasDescripcion = op.descripcion ? doc.splitTextToSize(op.descripcion, 163) : [];
+      const lineasDescripcion = op.descripcion ? doc.splitTextToSize(op.descripcion, anchoTexto) : [];
 
       const altoItem =
         9 + // título / badge / número
@@ -708,10 +763,12 @@ const PDFDiagnostico = (function () {
       doc.setTextColor(255, 255, 255);
       doc.text(numero, centroX, y + 1.3, { align: 'center' });
 
+      // Número, título y chip de gravedad comparten la misma línea base —
+      // se leen como un único bloque horizontal.
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       doc.setTextColor(...COLOR_TEXT_PDF);
-      doc.text(op.nombre || '', 30, y + 1.3);
+      doc.text(op.nombre || '', xTexto, y + 1.3);
 
       if (op.gravedad) {
         dibujarChipGravedad_(doc, anchoPagina - 15, y - 3.3, op.gravedad);
@@ -723,7 +780,7 @@ const PDFDiagnostico = (function () {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(...COLOR_MUTED_PDF);
-        doc.text(lineasDescripcion, 30, y);
+        doc.text(lineasDescripcion, xTexto, y);
         y += 5 * lineasDescripcion.length;
       }
 
@@ -767,20 +824,23 @@ const PDFDiagnostico = (function () {
     serviciosResueltos.forEach(servicio => {
       y = saltoPaginaSiHaceFalta_(doc, y, 260);
 
-      dibujarIconoCheck_(doc, 18, y - 1.5);
+      // Misma grilla horizontal que Oportunidades detectadas (ícono en
+      // x=19, texto en x=33) — antes usaba anclas propias (18/26) y las
+      // dos secciones no se leían como el mismo patrón.
+      dibujarIconoCheck_(doc, 19, y - 1.5);
 
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.setTextColor(...COLOR_TEXT_PDF);
-      doc.text(servicio.nombre || '', 26, y);
+      doc.text(servicio.nombre || '', 33, y);
       y += 5;
 
       if (servicio.descripcion) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
         doc.setTextColor(...COLOR_MUTED_PDF);
-        const lineas = doc.splitTextToSize(servicio.descripcion, 167);
-        doc.text(lineas, 26, y);
+        const lineas = doc.splitTextToSize(servicio.descripcion, 162);
+        doc.text(lineas, 33, y);
         y += 4.5 * lineas.length;
       }
 
