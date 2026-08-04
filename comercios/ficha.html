@@ -101,6 +101,13 @@
   @media (max-width: 860px) {
     .layout-vista { grid-template-columns: 1fr; }
   }
+  /* Sin esto, un grid de 1 columna sigue sin poder achicarse por debajo
+     del ancho de contenido de sus hijos (min-width:auto es el default en
+     CSS Grid) — es la causa real del scroll horizontal en mobile: la
+     columna entera (foto incluida, que es width:100% de su contenedor)
+     se estira para acomodar el contenido en vez de wrappear dentro del viewport. */
+  .layout-vista > * { min-width: 0; }
+  .grid-2 > * { min-width: 0; }
 
   .panel-comercio { padding: 24px; }
   .foto-comercio {
