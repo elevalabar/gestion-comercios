@@ -134,19 +134,23 @@ async function onCambiarEstado(e) {
   const nuevoEstado = e.target.value;
   const anterior = TODAS_LAS_ENCUESTAS.find(x => x.id === id);
   const estadoPrevio = anterior ? anterior.estado : 'Nuevo';
+  const msg = document.getElementById('msgEncuestas');
 
   e.target.disabled = true;
+  msg.classList.remove('visible');
   try {
     const res = await apiPost('actualizarEstadoEncuesta', { id, estado: nuevoEstado });
     if (res.ok) {
       if (anterior) anterior.estado = nuevoEstado;
       actualizarStats();
     } else {
-      alert(res.error || 'No se pudo actualizar el estado.');
+      msg.textContent = res.error || 'No se pudo actualizar el estado.';
+      msg.classList.add('visible');
       e.target.value = estadoPrevio;
     }
   } catch (err) {
-    alert('No se pudo conectar con el servidor. Probá de nuevo.');
+    msg.textContent = 'No se pudo conectar con el servidor. Probá de nuevo.';
+    msg.classList.add('visible');
     e.target.value = estadoPrevio;
   } finally {
     e.target.disabled = false;
@@ -240,7 +244,8 @@ async function copiarContactoAlPortapapeles(btn, texto) {
     await navigator.clipboard.writeText(texto);
     btn.textContent = '✔';
   } catch (err) {
-    alert('No se pudo copiar. Probá de nuevo.');
+    btn.textContent = '✕ No se pudo copiar';
+    setTimeout(() => { btn.textContent = original; }, 1800);
     return;
   }
   setTimeout(() => { btn.textContent = original; }, 1200);
@@ -261,12 +266,14 @@ async function onCopiarContextoIA() {
       await navigator.clipboard.writeText(res.texto);
       btn.textContent = '✔ Copiado';
     } else {
-      alert(res.error || 'No se pudo generar el contexto.');
+      console.error('Error generando contexto IA:', res && res.error);
+      btn.textContent = '✕ No se pudo generar';
     }
   } catch (err) {
-    alert('No se pudo conectar con el servidor.');
+    console.error('Error de conexión generando contexto IA:', err);
+    btn.textContent = '✕ Error de conexión';
   } finally {
-    setTimeout(() => { btn.textContent = textoOriginal; btn.disabled = false; }, 1500);
+    setTimeout(() => { btn.textContent = textoOriginal; btn.disabled = false; }, 1800);
   }
 }
 
