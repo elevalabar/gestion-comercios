@@ -376,10 +376,10 @@ function filaImportado(c) {
       <td><span class="badge ${badgeClase}">${escapeHtml(c.EstadoProspeccion) || '—'}</span></td>
       <td>
         <div class="celda-acciones">
-          ${c['Google Maps'] ? `<a href="${escapeHtml(c['Google Maps'])}" target="_blank" rel="noopener" class="btn" title="Abrir en Google Maps">🗺️</a>` : ''}
-          <a href="../comercios/ficha.html?id=${encodeURIComponent(c.ID)}" class="btn" title="Editar">✎</a>
-          <button type="button" class="btn btn-auditar" data-id="${escapeHtml(c.ID)}" title="Auditar">🔍</button>
-          <button type="button" class="btn peligro btn-eliminar-importado" data-id="${escapeHtml(c.ID)}" data-nombre="${escapeHtml(c.Nombre)}" title="Eliminar">🗑</button>
+          ${c['Google Maps'] ? `<a href="${escapeHtml(c['Google Maps'])}" target="_blank" rel="noopener" class="btn" title="Abrir en Google Maps">${ICONS.maps}</a>` : ''}
+          <a href="../comercios/ficha.html?id=${encodeURIComponent(c.ID)}" class="btn" title="Editar">${ICONS.editar}</a>
+          <button type="button" class="btn btn-auditar" data-id="${escapeHtml(c.ID)}" title="Auditar">${ICONS.auditar}</button>
+          <button type="button" class="btn peligro btn-eliminar-importado" data-id="${escapeHtml(c.ID)}" data-nombre="${escapeHtml(c.Nombre)}" title="Eliminar">${ICONS.eliminar}</button>
         </div>
       </td>
     </tr>
