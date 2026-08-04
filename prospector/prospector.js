@@ -206,7 +206,7 @@ document.getElementById('btnQuitarArchivo').addEventListener('click', () => {
   document.getElementById('archivoElegido').style.display = 'none';
   document.getElementById('previaWrap').style.display = 'none';
   document.getElementById('dropzone').style.display = 'block';
-  document.getElementById('resultadoImport').className = 'resultado-import';
+  document.getElementById('resultadoImport').className = 'mensaje';
 });
 
 function procesarArchivo(archivo) {
@@ -218,7 +218,7 @@ function procesarArchivo(archivo) {
   document.getElementById('nombreArchivo').textContent = archivo.name;
   document.getElementById('archivoElegido').style.display = 'flex';
   document.getElementById('dropzone').style.display = 'none';
-  document.getElementById('resultadoImport').className = 'resultado-import';
+  document.getElementById('resultadoImport').className = 'mensaje';
 
   const lector = new FileReader();
   lector.onload = (e) => {
@@ -277,7 +277,8 @@ function analizarYMostrarPrevia() {
 
 function mostrarResultado(tipo, texto) {
   const el = document.getElementById('resultadoImport');
-  el.className = 'resultado-import ' + tipo;
+  const clase = tipo === 'ok' ? 'mensaje-exito' : 'mensaje-error';
+  el.className = 'mensaje visible ' + clase;
   el.textContent = texto;
 }
 
@@ -420,20 +421,24 @@ function aplicarFiltrosImportados() {
 // Eliminar reutiliza el mismo endpoint que usa Comercios) ───────────
 
 document.getElementById('cuerpoTablaImportados').addEventListener('click', async (e) => {
+  const msgImportados = document.getElementById('msgImportados');
   const btnAuditar = e.target.closest('.btn-auditar');
   if (btnAuditar) {
     const id = btnAuditar.dataset.id;
     btnAuditar.disabled = true;
+    msgImportados.classList.remove('visible');
     try {
       const res = await apiPost('iniciarAuditoria', { idComercio: id });
       if (res.ok) {
         window.location.href = `../auditoria/index.html?id=${encodeURIComponent(res.id)}`;
       } else {
-        alert(res.error || 'No se pudo iniciar la auditoría.');
+        msgImportados.textContent = res.error || 'No se pudo iniciar la auditoría.';
+        msgImportados.classList.add('visible');
         btnAuditar.disabled = false;
       }
     } catch (err) {
-      alert('No se pudo conectar con el servidor.');
+      msgImportados.textContent = 'No se pudo conectar con el servidor.';
+      msgImportados.classList.add('visible');
       btnAuditar.disabled = false;
     }
     return;
@@ -444,6 +449,7 @@ document.getElementById('cuerpoTablaImportados').addEventListener('click', async
     const id = btnEliminar.dataset.id;
     const nombre = btnEliminar.dataset.nombre || 'este comercio';
     if (!confirm(`¿Eliminar "${nombre}"? Esta acción no se puede deshacer.`)) return;
+    msgImportados.classList.remove('visible');
     try {
       const res = await apiPost('eliminarComercio', { id });
       if (res.ok) {
@@ -451,10 +457,12 @@ document.getElementById('cuerpoTablaImportados').addEventListener('click', async
         actualizarStatsImportados();
         aplicarFiltrosImportados();
       } else {
-        alert(res.error || 'No se pudo eliminar.');
+        msgImportados.textContent = res.error || 'No se pudo eliminar.';
+        msgImportados.classList.add('visible');
       }
     } catch (err) {
-      alert('No se pudo conectar con el servidor.');
+      msgImportados.textContent = 'No se pudo conectar con el servidor.';
+      msgImportados.classList.add('visible');
     }
   }
 });
