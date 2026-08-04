@@ -191,6 +191,15 @@
     font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--border);
   }
   .hallazgo:last-child { border-bottom: none; }
+  /* Mismo punto de color que ya usa comercios/index.html para Estado del
+     Servicio — reemplaza los 🔴🟡🟢 de severidad por el sistema de color
+     de estado existente en vez de un emoji aparte. */
+  .hallazgo .tc-punto { margin-top: 4px; flex-shrink: 0; }
+  .tc-punto { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .tc-punto-ok      { background: var(--success); }
+  .tc-punto-alerta  { background: var(--warning); }
+  .tc-punto-alto    { background: var(--danger); }
+  .tc-punto-neutro  { background: var(--text-muted); }
 
   /* ================= DIAGNÓSTICO ================= */
 
@@ -255,9 +264,9 @@
         <div class="estrellas" id="vistaEstrellas"></div>
         <div class="estrellas-label" id="vistaEstrellasLabel"></div>
 
-        <div class="dato-linea"><span class="icono">🏷️</span> <span id="vistaRubro">—</span></div>
-        <div class="dato-linea"><span class="icono">📂</span> <span id="vistaCategoria">—</span></div>
-        <div class="dato-linea"><span class="icono">📍</span> <span id="vistaDireccion">No registrada</span></div>
+        <div class="dato-linea"><span class="icono" id="iconoRubro"></span> <span id="vistaRubro">—</span></div>
+        <div class="dato-linea"><span class="icono" id="iconoCategoria"></span> <span id="vistaCategoria">—</span></div>
+        <div class="dato-linea"><span class="icono" id="iconoDireccion"></span> <span id="vistaDireccion">No registrada</span></div>
 
         <div class="badges-fila">
           <span class="badge badge-cliente badge-punto" id="badgeEstadoComercial">Nuevo</span>
@@ -269,7 +278,7 @@
         <div id="listaContactoVista"></div>
 
         <div class="acciones-panel">
-          <button type="button" class="btn btn-primary" id="btnEditar">✏️ Editar información</button>
+          <button type="button" class="btn btn-primary" id="btnEditar"><span class="icono-btn" id="iconoEditar"></span> Editar información</button>
           <button type="button" class="btn" id="btnIrInspeccionVista">Nueva inspección</button>
           <button type="button" class="btn" id="btnIrAuditoriaVista">Nueva auditoría</button>
           <a class="btn" id="btnIrSeguimientoVista" href="#" style="text-decoration:none; text-align:center;">Ver seguimiento</a>
@@ -495,6 +504,7 @@
 <script src="../assets/js/api.js"></script>
 <script src="../assets/js/auth.js"></script>
 <script src="../assets/js/nav.js"></script>
+<script src="../assets/js/iconos.js"></script>
 <script src="../assets/js/categorias.js"></script>
 <script src="../assets/js/vendor/jspdf.umd.min.js"></script>
 <script src="../assets/js/pdfDiagnostico.js"></script>
