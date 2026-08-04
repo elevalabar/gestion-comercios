@@ -439,7 +439,7 @@ function renderNav(seccionActiva, base) {
       </div>
       <div class="usuario">
         <span>${sesion ? sesion.usuario : ''}</span>
-        <button class="btn-config" id="btnConfigTop" title="Configuración" aria-label="Configuración">⚙️</button>
+        <button class="btn-config" id="btnConfigTop" title="Configuración" aria-label="Configuración">${ICONS_NAV.config}</button>
         <button class="btn-logout" id="btnLogout" title="Cerrar sesión">Salir</button>
       </div>
     `;
