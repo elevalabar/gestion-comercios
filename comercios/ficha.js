@@ -25,6 +25,13 @@ function ocultarMensaje(idContenedor) {
   el.classList.remove('visible');
 }
 
+// Iconos estáticos del panel Vista (no dependen de datos del comercio,
+// se pintan una sola vez) — B1: reemplazo de 🏷️/📂/📍/✏️ por SVG.
+document.getElementById('iconoRubro').innerHTML = ICONS.tag;
+document.getElementById('iconoCategoria').innerHTML = ICONS.carpeta;
+document.getElementById('iconoDireccion').innerHTML = ICONS.pin;
+document.getElementById('iconoEditar').innerHTML = ICONS.editar;
+
 // AREAS del Eleva Score: deben coincidir EXACTO con la constante AREAS de
 // Code.gs (['Google','Web','WhatsApp','Redes','Catalogo','Branding']).
 // No es una lista a criterio del frontend — es la misma fuente de verdad
@@ -240,12 +247,12 @@ function pintarVista(c) {
   badgeServicio.className = 'badge badge-punto ' + estadoServicioClase(c['Estado del Servicio']);
 
   document.getElementById('listaContactoVista').innerHTML = [
-    itemContacto('☎️', 'Teléfono', c['Teléfono'], 'telefono'),
-    itemContacto('💬', 'WhatsApp', c.WhatsApp, 'whatsapp'),
-    itemContacto('📷', 'Instagram', c.Instagram, 'instagram'),
-    itemContacto('📘', 'Facebook', c.Facebook, 'facebook'),
-    itemContacto('🌐', 'Sitio web', c['Sitio web'], 'sitioweb'),
-    itemContacto('📍', 'Google Maps', c['Google Maps'], 'maps')
+    itemContacto(ICONS.telefono, 'Teléfono', c['Teléfono'], 'telefono'),
+    itemContacto(ICONS.whatsapp, 'WhatsApp', c.WhatsApp, 'whatsapp'),
+    itemContacto(ICONS.instagram, 'Instagram', c.Instagram, 'instagram'),
+    itemContacto(ICONS.facebook, 'Facebook', c.Facebook, 'facebook'),
+    itemContacto(ICONS.web, 'Sitio web', c['Sitio web'], 'sitioweb'),
+    itemContacto(ICONS.maps, 'Google Maps', c['Google Maps'], 'maps')
   ].join('');
 
   document.getElementById('vistaObservaciones').textContent = String(c.Observaciones || '').trim() || 'Sin notas cargadas.';
@@ -313,8 +320,8 @@ async function pintarResumen(c, auditorias, inspecciones) {
   const hallazgosHtml = problemas.length
     ? problemas.map(p => {
         const sev = inferirSeveridad(p);
-        const icono = sev === 'critico' ? '🔴' : (sev === 'importante' ? '🟡' : '🟢');
-        return `<div class="hallazgo"><span>${icono}</span> ${p}</div>`;
+        const clase = sev === 'critico' ? 'tc-punto-alto' : (sev === 'importante' ? 'tc-punto-alerta' : 'tc-punto-ok');
+        return `<div class="hallazgo"><span class="tc-punto ${clase}"></span> ${p}</div>`;
       }).join('')
     : '<p class="muted">No se detectaron problemas en la última inspección.</p>';
 
@@ -672,7 +679,7 @@ function pintarImagenes(imgs) {
       ${fotoPortada && img['ID Imagen'] === fotoPortada['ID Imagen']
         ? '<span class="badge-portada">Portada</span>'
         : `<button type="button" data-id="${img['ID Imagen']}" class="btnUsarPortada" title="Usar como portada">★</button>`}
-      <button type="button" data-id="${img['ID Imagen']}" class="btnEliminarFoto">✕</button>
+      <button type="button" data-id="${img['ID Imagen']}" class="btnEliminarFoto" title="Eliminar foto">${ICONS.eliminar}</button>
     </div>
   `).join('');
 
@@ -699,7 +706,7 @@ function pintarImagenes(imgs) {
       const res = await apiPost('eliminarImagen', { idImagen: btn.dataset.id });
       if (!res || res.ok === false) {
         btn.disabled = false;
-        btn.textContent = '✕';
+        btn.innerHTML = ICONS.eliminar;
         mostrarMensaje('msgFotos', (res && res.error) || 'No se pudo eliminar la foto.');
         return;
       }
@@ -785,7 +792,7 @@ function pintarArchivos(archivos) {
   lista.innerHTML = archivos.map(a => `
     <div class="archivo-item">
       <a href="${a.URL}" target="_blank" rel="noopener">${a['Nombre Archivo'] || 'Archivo'}</a>
-      <button type="button" data-id="${a['ID Archivo']}" class="btnEliminarArchivo">✕</button>
+      <button type="button" data-id="${a['ID Archivo']}" class="btnEliminarArchivo" title="Eliminar archivo">${ICONS.eliminar}</button>
     </div>
   `).join('');
 
@@ -797,7 +804,7 @@ function pintarArchivos(archivos) {
       const res = await apiPost('eliminarArchivo', { idArchivo: btn.dataset.id });
       if (!res || res.ok === false) {
         btn.disabled = false;
-        btn.textContent = '✕';
+        btn.innerHTML = ICONS.eliminar;
         mostrarMensaje('msgArchivos', (res && res.error) || 'No se pudo eliminar el archivo.');
         return;
       }
@@ -901,7 +908,7 @@ function pintarInspeccionesTab(lista) {
           </div>
         </a>
         ${i.estado === 'Finalizada' ? `<button type="button" class="btnDescargarPDF" data-id="${i.id}" title="Descargar PDF">📄</button>` : ''}
-        <button type="button" class="btnEliminarInspeccion" data-id="${i.id}" data-estado="${i.estado}" title="Eliminar inspección">✕</button>
+        <button type="button" class="btnEliminarInspeccion" data-id="${i.id}" data-estado="${i.estado}" title="Eliminar inspección">${ICONS.eliminar}</button>
       </div>`;
   }).join('');
 
@@ -993,7 +1000,7 @@ function pintarAuditoriasTab(lista) {
         </div>
       </a>
       ${a['Estado'] === 'Finalizada' ? `<button type="button" class="btnDescargarPDF" data-id="${a['ID Auditoria']}" title="Descargar PDF">📄</button>` : ''}
-      <button type="button" class="btnEliminarAuditoria" data-id="${a['ID Auditoria']}" title="Eliminar auditoría">✕</button>
+      <button type="button" class="btnEliminarAuditoria" data-id="${a['ID Auditoria']}" title="Eliminar auditoría">${ICONS.eliminar}</button>
     </div>
   `).join('');
 
