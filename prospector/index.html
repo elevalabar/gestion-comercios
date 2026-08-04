@@ -137,13 +137,6 @@
   .filtros-barra input[type="text"] { flex: 2; min-width: 200px; }
   .filtros-barra select { flex: 1; min-width: 130px; }
 
-  .resultado-import {
-    border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px;
-    font-size: 13px; display: none;
-  }
-  .resultado-import.ok { display: block; background: var(--success-soft); color: var(--success); }
-  .resultado-import.error { display: block; background: var(--danger-soft); color: var(--danger); }
-
   @media (max-width: 640px) {
     .stats-header { grid-template-columns: repeat(2, 1fr); }
   }
@@ -180,7 +173,7 @@
       <button type="button" class="btn" id="btnQuitarArchivo">Quitar</button>
     </div>
 
-    <div id="resultadoImport" class="resultado-import"></div>
+    <div id="resultadoImport" class="mensaje"></div>
 
     <div id="previaWrap" style="display:none;">
       <div class="stats-header" style="grid-template-columns: repeat(4, 1fr);">
@@ -275,6 +268,8 @@
         <option value="10">10+</option>
       </select>
     </div>
+
+    <div class="mensaje mensaje-error" id="msgImportados"></div>
 
     <div class="card">
       <div class="tabla-wrap">
