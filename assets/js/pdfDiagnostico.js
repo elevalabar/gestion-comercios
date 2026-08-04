@@ -936,8 +936,7 @@ const PDFDiagnostico = (function () {
     const { comercio, diagnostico, catalogoOportunidades, catalogoServicios, configuracionMarca } = datos || {};
 
     if (!diagnostico) {
-      alert('Todavía no hay un diagnóstico calculado para este comercio.');
-      return;
+      throw new Error('Todavía no hay un diagnóstico calculado para este comercio.');
     }
     if (!window.jspdf || !window.jspdf.jsPDF) {
       throw new Error('No se cargó la librería para generar PDFs (jsPDF). Recargá la página (Ctrl+F5) y probá de nuevo; si sigue, puede haber un bloqueador de contenido activo en el navegador.');
