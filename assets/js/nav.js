@@ -161,9 +161,7 @@ function inyectarEstilosNav() {
     .switch input:checked + .riel { background: var(--accent); }
     .switch input:checked + .riel::before { transform: translateX(16px); }
     .modal-marca .acciones-modal { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
-    .modal-marca .mensaje-guardado { font-size: 12.5px; margin-top: 10px; display: none; }
-    .modal-marca .mensaje-guardado.exito { display: block; color: var(--success); }
-    .modal-marca .mensaje-guardado.error { display: block; color: var(--danger); }
+    .modal-marca .mensaje-compacta { margin-top: 10px; }
     .modal-marca .estado-carga { font-size: 13px; color: var(--text-secondary); padding: 10px 0; }
 
     @media (max-width: 640px) {
@@ -333,7 +331,7 @@ async function cargarConfiguracionMarca_(overlay) {
 
   if (errorCarga) {
     cuerpo.innerHTML = `
-      <p class="mensaje-guardado error" style="display:block">No se pudo cargar la configuración actual. Probá de nuevo.</p>
+      <p class="mensaje mensaje-error mensaje-compacta visible">No se pudo cargar la configuración actual. Probá de nuevo.</p>
       <div class="acciones-modal">
         <button class="btn" id="btnCerrarModalMarca">Cerrar</button>
         <button class="btn btn-primary" id="btnReintentarModalMarca">Reintentar</button>
@@ -367,7 +365,7 @@ async function cargarConfiguracionMarca_(overlay) {
         <span class="riel"></span>
       </label>
     </div>
-    <p class="mensaje-guardado" id="mensajeGuardadoMarca"></p>
+    <p class="mensaje mensaje-compacta" id="mensajeGuardadoMarca"></p>
     <div class="acciones-modal">
       <button class="btn" id="btnCerrarModalMarca">Cancelar</button>
       <button class="btn btn-primary" id="btnGuardarModalMarca">Guardar</button>
@@ -393,20 +391,20 @@ async function guardarConfiguracionMarca_(overlay) {
   btn.disabled = true;
   btnCancelar.disabled = true;
   btn.textContent = 'Guardando...';
-  mensaje.className = 'mensaje-guardado';
+  mensaje.className = 'mensaje mensaje-compacta';
   mensaje.textContent = '';
 
   try {
     const res = await apiPost('actualizarConfiguracionMarca', payload);
     if (res && res.ok) {
-      mensaje.className = 'mensaje-guardado exito';
+      mensaje.className = 'mensaje mensaje-exito mensaje-compacta visible';
       mensaje.textContent = 'Guardado. El próximo PDF que se genere ya va a usar estos datos.';
     } else {
-      mensaje.className = 'mensaje-guardado error';
+      mensaje.className = 'mensaje mensaje-error mensaje-compacta visible';
       mensaje.textContent = (res && res.error) || 'No se pudo guardar. Probá de nuevo.';
     }
   } catch (e) {
-    mensaje.className = 'mensaje-guardado error';
+    mensaje.className = 'mensaje mensaje-error mensaje-compacta visible';
     mensaje.textContent = 'No se pudo guardar. Probá de nuevo.';
   }
 
