@@ -8,6 +8,23 @@
 const params = new URLSearchParams(window.location.search);
 const ID_COMERCIO = params.get('id');
 
+// Helpers para el sistema global de mensajes (.mensaje / .mensaje-error).
+// Reciben el id del contenedor porque cada acción de la ficha tiene su
+// propio mensaje contextual (Fotos, Archivos, Inspecciones, Auditorías,
+// Diagnóstico, botones "Nueva inspección/auditoría" del panel) — ver
+// [[eleva-lab-auditoria-diseno-admin]] (Etapa 2, A6) para el detalle.
+function mostrarMensaje(idContenedor, texto) {
+  const el = document.getElementById(idContenedor);
+  if (!el) return;
+  el.textContent = texto;
+  el.classList.add('visible');
+}
+function ocultarMensaje(idContenedor) {
+  const el = document.getElementById(idContenedor);
+  if (!el) return;
+  el.classList.remove('visible');
+}
+
 // AREAS del Eleva Score: deben coincidir EXACTO con la constante AREAS de
 // Code.gs (['Google','Web','WhatsApp','Redes','Catalogo','Branding']).
 // No es una lista a criterio del frontend — es la misma fuente de verdad
@@ -439,6 +456,8 @@ function pintarTabDiagnostico(diagnostico, diagnosticoError) {
       <button type="button" id="btnDescargarPDFDiagnostico" class="btn-secundario" style="margin-left: 12px;">Descargar Informe PDF</button>
     </div>
 
+    <div class="mensaje mensaje-error" id="msgDiagnosticoPDF"></div>
+
     <div class="score-card" style="margin-bottom: 20px;">
       <div class="score-circulo">
         <div class="num">${formatPorcentajeDiagnostico(madurez)}</div>
@@ -465,6 +484,7 @@ function pintarTabDiagnostico(diagnostico, diagnosticoError) {
       btnPDF.disabled = true;
       const textoOriginal = btnPDF.textContent;
       btnPDF.textContent = 'Generando...';
+      ocultarMensaje('msgDiagnosticoPDF');
       try {
         const datos = await apiGet('obtenerDatosPDFDiagnostico', { idComercio: ID_COMERCIO });
         if (!datos || !datos.ok) {
@@ -479,7 +499,7 @@ function pintarTabDiagnostico(diagnostico, diagnosticoError) {
         });
       } catch (err) {
         console.error('Error generando PDF de diagnóstico:', err);
-        alert('No se pudo generar el PDF: ' + (err && err.message ? err.message : err));
+        mostrarMensaje('msgDiagnosticoPDF', 'No se pudo generar el PDF: ' + (err && err.message ? err.message : err));
       }
       btnPDF.disabled = false;
       btnPDF.textContent = textoOriginal;
@@ -659,13 +679,14 @@ function pintarImagenes(imgs) {
   document.querySelectorAll('.btnUsarPortada').forEach(btn => {
     btn.addEventListener('click', async () => {
       btn.disabled = true;
+      ocultarMensaje('msgFotos');
       const res = await apiPost('guardarPortada', { idComercio: ID_COMERCIO, idImagen: btn.dataset.id });
       if (res && res.ok) {
         comercioActual['ID Imagen Portada'] = btn.dataset.id;
         pintarImagenes(IMAGENES_ACTUALES);
       } else {
         btn.disabled = false;
-        alert((res && res.error) || 'No se pudo cambiar la portada.');
+        mostrarMensaje('msgFotos', (res && res.error) || 'No se pudo cambiar la portada.');
       }
     });
   });
@@ -674,11 +695,12 @@ function pintarImagenes(imgs) {
     btn.addEventListener('click', async () => {
       btn.disabled = true;
       btn.textContent = '…';
+      ocultarMensaje('msgFotos');
       const res = await apiPost('eliminarImagen', { idImagen: btn.dataset.id });
       if (!res || res.ok === false) {
         btn.disabled = false;
         btn.textContent = '✕';
-        alert((res && res.error) || 'No se pudo eliminar la foto.');
+        mostrarMensaje('msgFotos', (res && res.error) || 'No se pudo eliminar la foto.');
         return;
       }
       cargarImagenes();
@@ -771,11 +793,12 @@ function pintarArchivos(archivos) {
     btn.addEventListener('click', async () => {
       btn.disabled = true;
       btn.textContent = '…';
+      ocultarMensaje('msgArchivos');
       const res = await apiPost('eliminarArchivo', { idArchivo: btn.dataset.id });
       if (!res || res.ok === false) {
         btn.disabled = false;
         btn.textContent = '✕';
-        alert((res && res.error) || 'No se pudo eliminar el archivo.');
+        mostrarMensaje('msgArchivos', (res && res.error) || 'No se pudo eliminar el archivo.');
         return;
       }
       cargarArchivos();
@@ -887,11 +910,12 @@ function pintarInspeccionesTab(lista) {
       e.preventDefault();
       e.stopPropagation();
       btn.disabled = true;
+      ocultarMensaje('msgInspecciones');
       try {
         await generarPDFInspeccion(btn.dataset.id);
       } catch (err) {
         console.error('Error generando PDF de inspección:', err);
-        alert('No se pudo generar el PDF: ' + (err && err.message ? err.message : err));
+        mostrarMensaje('msgInspecciones', 'No se pudo generar el PDF: ' + (err && err.message ? err.message : err));
       }
       btn.disabled = false;
     });
@@ -907,37 +931,39 @@ function pintarInspeccionesTab(lista) {
         if (!confirm('¿Eliminar esta inspección? Esta acción no se puede deshacer.')) return;
       }
       btn.disabled = true;
+      ocultarMensaje('msgInspecciones');
       try {
         const res = await apiPost('eliminarInspeccion', { idInspeccion: btn.dataset.id });
         if (res.ok) {
           await cargarTodo();
         } else {
-          alert(res.error || 'No se pudo eliminar la inspección.');
+          mostrarMensaje('msgInspecciones', res.error || 'No se pudo eliminar la inspección.');
           btn.disabled = false;
         }
       } catch (err) {
-        alert('No se pudo conectar con el servidor. Probá de nuevo.');
+        mostrarMensaje('msgInspecciones', 'No se pudo conectar con el servidor. Probá de nuevo.');
         btn.disabled = false;
       }
     });
   });
 }
 
-async function iniciarInspeccion() {
+async function iniciarInspeccion(idMensaje) {
+  ocultarMensaje(idMensaje);
   try {
     const res = await apiPost('iniciarInspeccion', { idComercio: ID_COMERCIO });
     if (res.ok) {
       window.location.href = `../inspeccion/index.html?id=${encodeURIComponent(res.id)}`;
     } else {
-      alert(res.error || 'No se pudo iniciar la inspección.');
+      mostrarMensaje(idMensaje, res.error || 'No se pudo iniciar la inspección.');
     }
   } catch (err) {
-    alert('No se pudo conectar con el servidor. Probá de nuevo.');
+    mostrarMensaje(idMensaje, 'No se pudo conectar con el servidor. Probá de nuevo.');
   }
 }
 
-document.getElementById('btnIniciarInspeccion').addEventListener('click', iniciarInspeccion);
-document.getElementById('btnIrInspeccionVista').addEventListener('click', iniciarInspeccion);
+document.getElementById('btnIniciarInspeccion').addEventListener('click', () => iniciarInspeccion('msgInspecciones'));
+document.getElementById('btnIrInspeccionVista').addEventListener('click', () => iniciarInspeccion('msgAccionesPanel'));
 
 // ─────────────────────────────────────────────
 // AUDITORÍAS
@@ -978,11 +1004,12 @@ function pintarAuditoriasTab(lista) {
       const auditoria = auditoriasActuales.find(x => x['ID Auditoria'] === btn.dataset.id);
       if (!auditoria) return;
       btn.disabled = true;
+      ocultarMensaje('msgAuditorias');
       try {
         await generarPDFAuditoria(auditoria);
       } catch (err) {
         console.error('Error generando PDF de auditoría:', err);
-        alert('No se pudo generar el PDF: ' + (err && err.message ? err.message : err));
+        mostrarMensaje('msgAuditorias', 'No se pudo generar el PDF: ' + (err && err.message ? err.message : err));
       }
       btn.disabled = false;
     });
@@ -994,37 +1021,39 @@ function pintarAuditoriasTab(lista) {
       e.stopPropagation();
       if (!confirm('¿Eliminar esta auditoría? Esta acción no se puede deshacer.')) return;
       btn.disabled = true;
+      ocultarMensaje('msgAuditorias');
       try {
         const res = await apiPost('eliminarAuditoria', { idAuditoria: btn.dataset.id });
         if (res.ok) {
           await cargarTodo();
         } else {
-          alert(res.error || 'No se pudo eliminar la auditoría.');
+          mostrarMensaje('msgAuditorias', res.error || 'No se pudo eliminar la auditoría.');
           btn.disabled = false;
         }
       } catch (err) {
-        alert('No se pudo conectar con el servidor. Probá de nuevo.');
+        mostrarMensaje('msgAuditorias', 'No se pudo conectar con el servidor. Probá de nuevo.');
         btn.disabled = false;
       }
     });
   });
 }
 
-async function iniciarAuditoria() {
+async function iniciarAuditoria(idMensaje) {
+  ocultarMensaje(idMensaje);
   try {
     const res = await apiPost('iniciarAuditoria', { idComercio: ID_COMERCIO });
     if (res.ok) {
       window.location.href = `../auditoria/index.html?id=${encodeURIComponent(res.id)}`;
     } else {
-      alert(res.error || 'No se pudo iniciar la auditoría.');
+      mostrarMensaje(idMensaje, res.error || 'No se pudo iniciar la auditoría.');
     }
   } catch (err) {
-    alert('No se pudo conectar con el servidor. Probá de nuevo.');
+    mostrarMensaje(idMensaje, 'No se pudo conectar con el servidor. Probá de nuevo.');
   }
 }
 
-document.getElementById('btnIniciarAuditoria').addEventListener('click', iniciarAuditoria);
-document.getElementById('btnIrAuditoriaVista').addEventListener('click', iniciarAuditoria);
+document.getElementById('btnIniciarAuditoria').addEventListener('click', () => iniciarAuditoria('msgAuditorias'));
+document.getElementById('btnIrAuditoriaVista').addEventListener('click', () => iniciarAuditoria('msgAccionesPanel'));
 
 // ─────────────────────────────────────────────
 // EXPORTACIÓN A PDF (Auditoría / Inspección)
@@ -1258,8 +1287,7 @@ function dibujarListaPDF(doc, titulo, items, y, colorPunto, textoVacio) {
 async function generarPDFInspeccion(idInspeccion) {
   const detalle = await apiGet('getInspeccion', { id: idInspeccion });
   if (!detalle) {
-    alert('No se pudo obtener el detalle de la inspección.');
-    return;
+    throw new Error('No se pudo obtener el detalle de la inspección.');
   }
 
   if (!window.jspdf || !window.jspdf.jsPDF) {
