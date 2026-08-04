@@ -82,10 +82,10 @@ function renderFila(e) {
   let contactoHtml = '<span class="celda-muted">—</span>';
   if (e.whatsapp) {
     const numero = String(e.whatsapp).replace(/[^\d]/g, '');
-    contactoHtml = `<a href="https://wa.me/${numero}" target="_blank" class="icono-contacto" title="WhatsApp: ${escapeHtml(e.whatsapp)}" onclick="event.stopPropagation()">💬</a>`;
+    contactoHtml = `<a href="https://wa.me/${numero}" target="_blank" class="icono-contacto" title="WhatsApp: ${escapeHtml(e.whatsapp)}" onclick="event.stopPropagation()">${ICONS.whatsapp}</a>`;
   } else if (e.email) {
     const emailEscapado = escapeHtml(e.email).replace(/'/g, '&#39;');
-    contactoHtml = `<button type="button" class="icono-contacto" title="Copiar email: ${emailEscapado}" onclick="event.stopPropagation(); copiarContactoAlPortapapeles(this, '${emailEscapado}')">✉️</button>`;
+    contactoHtml = `<button type="button" class="icono-contacto" title="Copiar email: ${emailEscapado}" onclick="event.stopPropagation(); copiarContactoAlPortapapeles(this, '${emailEscapado}')">${ICONS.email}</button>`;
   }
 
   return `
