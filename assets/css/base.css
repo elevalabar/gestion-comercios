@@ -109,17 +109,29 @@ button:disabled, .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .badge-cliente { background: var(--success-soft); color: var(--success); }
 .badge-omitida { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
 
-/* Mensajes de error / estado */
-.mensaje-error {
-  background: var(--danger-soft);
-  color: var(--danger);
+/* Sistema global de mensajes de feedback (éxito / error / info) */
+.mensaje {
   border-radius: var(--radius);
   padding: 10px 14px;
   font-size: 13px;
   margin-bottom: 16px;
   display: none;
+  word-break: break-word;
 }
-.mensaje-error.visible { display: block; }
+.mensaje.visible { display: block; }
+
+.mensaje-exito { background: var(--success-soft); color: var(--success); }
+.mensaje-error { background: var(--danger-soft); color: var(--danger); }
+.mensaje-info  { background: var(--bg-card-alt); color: var(--text-secondary); }
+
+/* Variante compacta: contextos chicos (ej. modal de Configuración de marca).
+   Sin fondo, sin margen propio — el color sigue viniendo de -exito/-error. */
+.mensaje-compacta {
+  background: none;
+  padding: 0;
+  margin-bottom: 0;
+  font-size: 12.5px;
+}
 
 /* Utilidades */
 .flex { display: flex; align-items: center; }
