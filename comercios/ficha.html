@@ -239,7 +239,7 @@
   </div>
   <p class="muted" id="subtituloComercio" style="margin-bottom: 16px;"></p>
 
-  <div class="mensaje-error" id="msgError"></div>
+  <div class="mensaje mensaje-error" id="msgError"></div>
 
   <!-- ============ MODO VISTA ============ -->
   <div id="modoVista">
@@ -274,6 +274,8 @@
           <button type="button" class="btn" id="btnIrAuditoriaVista">Nueva auditoría</button>
           <a class="btn" id="btnIrSeguimientoVista" href="#" style="text-decoration:none; text-align:center;">Ver seguimiento</a>
         </div>
+
+        <div class="mensaje mensaje-error" id="msgAccionesPanel"></div>
       </div>
 
       <div>
@@ -319,6 +321,7 @@
               <button type="button" class="btn btn-primary" id="btnIniciarInspeccion">Inspección Inicial</button>
             </div>
             <p class="muted" style="margin-bottom: 10px;">Evaluación rápida (2 a 5 min). No reemplaza la Auditoría completa.</p>
+            <div class="mensaje mensaje-error" id="msgInspecciones"></div>
             <div id="listaInspecciones"><p class="muted">Cargando...</p></div>
           </div>
         </div>
@@ -331,6 +334,7 @@
               <button type="button" class="btn btn-primary" id="btnIniciarAuditoria">+ Iniciar nueva auditoría</button>
             </div>
             <p class="muted" style="margin-bottom: 10px;">Historial de evaluaciones digitales de este comercio.</p>
+            <div class="mensaje mensaje-error" id="msgAuditorias"></div>
             <div id="listaAuditorias"><p class="muted">Cargando...</p></div>
           </div>
         </div>
@@ -356,6 +360,7 @@
               <button type="button" class="btn btn-primary oculto" id="btnSubirFoto">Subir foto</button>
               <span id="estadoSubidaFoto" class="muted"></span>
             </div>
+            <div class="mensaje mensaje-error" id="msgFotos"></div>
             <div class="fotos-grid" id="fotosGridVista"></div>
 
             <div class="seccion">
@@ -368,6 +373,7 @@
                 <button type="button" class="btn btn-primary oculto" id="btnSubirArchivo">Subir archivo</button>
                 <span id="estadoSubidaArchivo" class="muted"></span>
               </div>
+              <div class="mensaje mensaje-error" id="msgArchivos"></div>
               <div id="listaArchivosVista" class="lista-archivos"></div>
             </div>
           </div>
