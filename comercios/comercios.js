@@ -205,6 +205,18 @@ document.addEventListener('click', cerrarTodosLosMenus);
 
 // ── Eliminar (misma lógica que antes) ─────────────────────────────
 
+function mostrarMensajeComercios(texto) {
+  const el = document.getElementById('msgComercios');
+  if (!el) return;
+  el.textContent = texto;
+  el.classList.add('visible');
+}
+function ocultarMensajeComercios() {
+  const el = document.getElementById('msgComercios');
+  if (!el) return;
+  el.classList.remove('visible');
+}
+
 async function onClickEliminar(e) {
   e.stopPropagation();
 
@@ -215,6 +227,7 @@ async function onClickEliminar(e) {
   if (!confirmado) return;
 
   e.currentTarget.disabled = true;
+  ocultarMensajeComercios();
   try {
     const res = await apiPost('eliminarComercio', { id });
     if (res.ok) {
@@ -222,11 +235,11 @@ async function onClickEliminar(e) {
       actualizarStats();
       pintarLista(TODOS_LOS_COMERCIOS);
     } else {
-      alert(res.error || 'No se pudo eliminar el comercio.');
+      mostrarMensajeComercios(res.error || 'No se pudo eliminar el comercio.');
       e.currentTarget.disabled = false;
     }
   } catch (err) {
-    alert('No se pudo conectar con el servidor. Probá de nuevo.');
+    mostrarMensajeComercios('No se pudo conectar con el servidor. Probá de nuevo.');
     e.currentTarget.disabled = false;
   }
 }
