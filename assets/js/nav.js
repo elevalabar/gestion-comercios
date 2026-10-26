@@ -11,7 +11,8 @@ const SECCIONES = [
   { id: 'comercios',   label: 'Comercios',   href: 'comercios/index.html' },
   { id: 'prospector',  label: 'Prospector',  href: 'prospector/index.html' },
   { id: 'seguimiento', label: 'Seguimiento', href: 'seguimiento/index.html' },
-  { id: 'encuestas',   label: 'Encuestas',   href: 'encuestas/index.html' }
+  { id: 'encuestas',   label: 'Encuestas',   href: 'encuestas/index.html' },
+  { id: 'solicitudes', label: 'Solicitudes', href: 'solicitudes/index.html' }
 ];
 
 // Mismo lenguaje visual que ICONS en comercios/comercios.js (viewBox 24x24,
@@ -23,6 +24,7 @@ const ICONS_NAV = {
   prospector: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
   seguimiento: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
   encuestas: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>',
+  solicitudes: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
   config: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.4M12 18.6V21M4.9 6.3l1.7 1.4M17.4 16.3l1.7 1.4M4.9 17.7l1.7-1.4M17.4 7.7l1.7-1.4M3 12h2.4M18.6 12H21"/></svg>'
 };
 
