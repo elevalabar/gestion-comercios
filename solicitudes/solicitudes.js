@@ -4,7 +4,7 @@
 // script del diagnóstico. Solo muestra datos si la sesión del panel es válida:
 // el script de Solicitudes se lo consulta al script del panel.
 //
-// Acciones: panelListar · panelDetalle · panelCrear · panelRevocar · panelExtender · panelReabrir · panelEliminar (solo Prueba)
+// Acciones: panelListar · panelDetalle · panelCrear · panelRevocar · panelExtender · panelReabrir · panelEliminar (solo Prueba) · panelRegenerar
 // ─────────────────────────────────────────────
 
 const SOLICITUDES_API_URL = 'https://script.google.com/macros/s/AKfycbxKzJlhH59wylg9LX7xW_WbaR_eoOMd0ZT5KQa8pGOj80CPqpS8twSopnyPe0sU-oSdkw/exec';
@@ -230,6 +230,7 @@ function renderDetalle(d) {
   el('drawerContenido').innerHTML = meta + bloques + aut + his;
 
   const acc = [];
+  if (s.estado === 'Creada' || s.estado === 'En curso') acc.push('<button type="button" class="btn" data-acc="regenerar">Nuevo enlace</button>');
   if (s.estado !== 'Revocada') {
     acc.push('<button type="button" class="btn" data-acc="extender">Extender vencimiento</button>');
     acc.push('<button type="button" class="btn" data-acc="revocar">Revocar enlace</button>');
@@ -254,6 +255,9 @@ async function accionDrawer(acc) {
   } else if (acc === 'reabrir') {
     if (!window.confirm('¿Reabrir ' + id + '? El cliente podrá volver a editar y enviar con su mismo enlace.')) return;
     accion = 'panelReabrir';
+  } else if (acc === 'regenerar') {
+    if (!window.confirm('¿Generar un enlace nuevo para ' + id + '? El enlace anterior deja de funcionar. Las respuestas ya guardadas se conservan.')) return;
+    accion = 'panelRegenerar';
   } else if (acc === 'eliminar') {
     const escrito = window.prompt('Se borran para siempre las respuestas y autorizaciones de ' + id + '.\nPara confirmar, escribí su número (' + id + '):');
     if (escrito === null) return;
@@ -265,6 +269,7 @@ async function accionDrawer(acc) {
   try {
     const res = await apiSolicitudes(accion, extra);
     if (!res.ok) { mostrarError('msgDrawer', mensajeError(res)); el('drawerAcciones').querySelectorAll('button').forEach(b => { b.disabled = false; }); return; }
+    if (accion === 'panelRegenerar') mostrarEnlace('Nuevo enlace de ' + id, res.url);
     await cargar();
     if (accion === 'panelEliminar') { cerrarDrawer(); return; }
     abrirDrawer(id);
@@ -279,6 +284,14 @@ el('btnCerrarDrawer').addEventListener('click', cerrarDrawer);
 el('drawerFondo').addEventListener('click', e => { if (e.target.id === 'drawerFondo') cerrarDrawer(); });
 
 // ── Nueva invitación ────────────────────────────────────────────
+
+function mostrarEnlace(titulo, url) {
+  el('enlaceTitulo').textContent = titulo;
+  el('enlaceUrl').value = url;
+  el('btnCopiarEnlace').textContent = 'Copiar enlace';
+  el('modalEnlace').classList.add('abierto');
+  el('enlaceUrl').select();
+}
 
 function abrirModalNueva() {
   el('nuevoNombre').value = '';
@@ -304,11 +317,7 @@ async function crearInvitacion() {
     const res = await apiSolicitudes('panelCrear', { nombre, tipo: el('nuevoTipo').value, idComercio: el('nuevoComercio').value });
     if (!res.ok) { mostrarError('msgNueva', mensajeError(res)); return; }
     el('modalNueva').classList.remove('abierto');
-    el('enlaceTitulo').textContent = 'Invitación ' + res.id + ' creada';
-    el('enlaceUrl').value = res.url;
-    el('btnCopiarEnlace').textContent = 'Copiar enlace';
-    el('modalEnlace').classList.add('abierto');
-    el('enlaceUrl').select();
+    mostrarEnlace('Invitación ' + res.id + ' creada', res.url);
     cargar();
   } catch (e) {
     mostrarError('msgNueva', 'No se pudo conectar con el servidor.');
