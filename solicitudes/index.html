@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solicitudes · Eleva Lab</title>
+<script>
+  (function () {
+    const tema = localStorage.getItem('eleva_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', tema);
+  })();
+</script>
+<link rel="stylesheet" href="../assets/css/variables.css">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="icon" type="image/png" href="../assets/img/logo.png">
+<style>
+  .stats-header { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 24px 0; }
+  .stat-card { background: var(--bg-card-alt); border-radius: var(--radius); padding: 16px; }
+  .stat-card p.stat-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+  .stat-card p.stat-valor { font-size: 24px; font-weight: 500; color: var(--text-primary); }
+
+  .filtros-barra { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .filtros-barra input[type="text"] { flex: 2; min-width: 200px; }
+  .filtros-barra select { flex: 1; min-width: 130px; }
+
+  table.tabla-solicitudes { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
+  .tabla-solicitudes col.col-id { width: 10%; }
+  .tabla-solicitudes col.col-negocio { width: 28%; }
+  .tabla-solicitudes col.col-tipo { width: 10%; }
+  .tabla-solicitudes col.col-estado { width: 14%; }
+  .tabla-solicitudes col.col-actividad { width: 19%; }
+  .tabla-solicitudes col.col-vence { width: 19%; }
+  .tabla-solicitudes th { text-align: left; padding: 10px 12px; color: var(--text-secondary); font-weight: 500; border-bottom: 1px solid var(--border); }
+  .tabla-solicitudes td { padding: 12px; border-bottom: 1px solid var(--border); color: var(--text-primary); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabla-solicitudes tr:last-child td { border-bottom: none; }
+  .tabla-solicitudes tbody tr { cursor: pointer; }
+  .tabla-solicitudes tbody tr:hover { background: var(--bg-card-alt); }
+  .celda-empresa { font-weight: 500; }
+  .celda-muted { color: var(--text-secondary); }
+
+  .badge-estado-creada   { background: var(--bg-card-alt); color: var(--text-secondary); }
+  .badge-estado-en-curso { background: var(--warning-soft); color: var(--warning); }
+  .badge-estado-enviada  { background: var(--success-soft); color: var(--success); }
+  .badge-estado-vencida, .badge-estado-revocada { background: var(--danger-soft); color: var(--danger); }
+  .badge-tipo-prueba { background: var(--bg-card-alt); color: var(--text-secondary); }
+  .badge-tipo-real   { background: var(--accent-soft); color: var(--accent); }
+
+  .aviso-borrador { margin-bottom: 16px; }
+
+  .drawer-fondo { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 20; }
+  .drawer-fondo.abierto { display: block; }
+  .drawer-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 520px; max-width: 92vw;
+    background: var(--bg-card); border-left: 1px solid var(--border);
+    z-index: 21; overflow-y: auto; padding: 24px;
+    transform: translateX(100%); transition: transform 0.2s ease;
+  }
+  .drawer-fondo.abierto .drawer-panel { transform: translateX(0); }
+  .drawer-cabecera { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .drawer-cabecera h2 { font-size: 18px; margin-bottom: 2px; }
+  .btn-cerrar-drawer { background: none; border: none; color: var(--text-secondary); font-size: 20px; cursor: pointer; }
+  .drawer-meta { font-size: 13px; color: var(--text-secondary); margin-bottom: 18px; line-height: 1.7; }
+  .drawer-bloque { margin-bottom: 22px; }
+  .drawer-bloque h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin-bottom: 10px; }
+  .drawer-pregunta { margin-bottom: 12px; }
+  .drawer-pregunta p.texto { font-size: 12px; color: var(--text-secondary); margin-bottom: 2px; }
+  .drawer-pregunta p.respuesta { font-size: 14px; color: var(--text-primary); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .drawer-pregunta.inactiva p.respuesta { color: var(--text-muted); }
+  .drawer-acciones { display: flex; gap: 8px; margin-top: 24px; flex-wrap: wrap; }
+  .fila-aut { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .fila-aut:last-child { border-bottom: none; }
+  .fila-aut small { display: block; color: var(--text-secondary); }
+  .fila-his { font-size: 12px; color: var(--text-secondary); padding: 2px 0; }
+
+  .overlay-modal { position: fixed; inset: 0; z-index: 40; background: rgba(10,10,14,.45); display: none; align-items: center; justify-content: center; padding: 16px; }
+  .overlay-modal.abierto { display: flex; }
+  .modal-caja { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); width: 100%; max-width: 460px; max-height: calc(100vh - 32px); overflow-y: auto; padding: 22px; box-shadow: 0 12px 32px rgba(0,0,0,.28); }
+  .modal-caja h3 { font-size: 16px; margin: 0 0 14px; }
+  .modal-caja .campo { margin-bottom: 14px; }
+  .modal-caja .acciones-modal { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+  .enlace-caja { font-size: 12px; }
+
+  @media (max-width: 640px) {
+    .stats-header { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div id="nav-top"></div>
+
+<div class="container" style="padding-top: 24px;">
+  <div class="flex-between" style="margin-bottom: 4px;">
+    <h1>Solicitudes</h1>
+    <button type="button" class="btn btn-primary" id="btnNueva">+ Nueva invitación</button>
+  </div>
+  <p class="muted">Invitaciones enviadas a negocios y las respuestas que fueron completando.</p>
+
+  <div class="stats-header">
+    <div class="stat-card"><p class="stat-label">Total</p><p class="stat-valor" id="statTotal">—</p></div>
+    <div class="stat-card"><p class="stat-label">Sin abrir</p><p class="stat-valor" id="statCreadas">—</p></div>
+    <div class="stat-card"><p class="stat-label">En curso</p><p class="stat-valor" id="statEnCurso">—</p></div>
+    <div class="stat-card"><p class="stat-label">Enviadas</p><p class="stat-valor" id="statEnviadas">—</p></div>
+  </div>
+
+  <div class="mensaje mensaje-info aviso-borrador" id="avisoBorrador">El formulario está en modo borrador (revisión profesional de textos pendiente): por ahora solo se pueden crear invitaciones de Prueba.</div>
+
+  <div class="filtros-barra">
+    <input type="text" id="buscador" placeholder="Buscar por negocio, comercio o número (SOL-0001)...">
+    <select id="filtroEstado">
+      <option value="">Estado</option>
+      <option value="Creada">Sin abrir</option>
+      <option value="En curso">En curso</option>
+      <option value="Enviada">Enviada</option>
+      <option value="Vencida">Vencida</option>
+      <option value="Revocada">Revocada</option>
+    </select>
+    <select id="filtroTipo">
+      <option value="">Tipo</option>
+      <option value="Real">Real</option>
+      <option value="Prueba">Prueba</option>
+    </select>
+  </div>
+
+  <div class="mensaje mensaje-error" id="msgSolicitudes"></div>
+
+  <div class="card">
+    <div class="tabla-wrap">
+      <table class="tabla-solicitudes">
+        <colgroup>
+          <col class="col-id"><col class="col-negocio"><col class="col-tipo"><col class="col-estado"><col class="col-actividad"><col class="col-vence">
+        </colgroup>
+        <thead>
+          <tr><th>N.º</th><th>Negocio (provisional)</th><th>Tipo</th><th>Estado</th><th>Última actividad</th><th>Vence</th></tr>
+        </thead>
+        <tbody id="cuerpoTabla">
+          <tr><td colspan="6" class="muted">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="nav-bottom"></div>
+
+<!-- Detalle -->
+<div class="drawer-fondo" id="drawerFondo">
+  <div class="drawer-panel" id="drawerPanel">
+    <div class="drawer-cabecera">
+      <div>
+        <h2 id="drawerNombre">—</h2>
+        <p class="muted" id="drawerId">—</p>
+      </div>
+      <button type="button" class="btn-cerrar-drawer" id="btnCerrarDrawer" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="mensaje mensaje-error" id="msgDrawer"></div>
+    <div id="drawerContenido"><p class="muted">Cargando...</p></div>
+    <div class="drawer-acciones" id="drawerAcciones"></div>
+  </div>
+</div>
+
+<!-- Nueva invitación -->
+<div class="overlay-modal" id="modalNueva">
+  <div class="modal-caja">
+    <h3>Nueva invitación</h3>
+    <div class="campo">
+      <label for="nuevoNombre">Nombre provisional del negocio (con el que lo conocés)</label>
+      <input type="text" id="nuevoNombre" maxlength="80" autocomplete="off">
+    </div>
+    <div class="campo">
+      <label for="nuevoTipo">Tipo</label>
+      <select id="nuevoTipo">
+        <option value="Prueba">Prueba (datos ficticios)</option>
+        <option value="Real" id="optReal">Real (cliente verdadero)</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label for="nuevoComercio">Comercio del panel (opcional)</label>
+      <select id="nuevoComercio"><option value="">Sin asociar</option></select>
+    </div>
+    <div class="mensaje mensaje-error" id="msgNueva"></div>
+    <div class="acciones-modal">
+      <button type="button" class="btn" id="btnNuevaCancelar">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="btnNuevaCrear">Crear invitación</button>
+    </div>
+  </div>
+</div>
+
+<!-- Enlace creado -->
+<div class="overlay-modal" id="modalEnlace">
+  <div class="modal-caja">
+    <h3 id="enlaceTitulo">Invitación creada</h3>
+    <p class="muted" style="margin-bottom: 10px;">Copiá este enlace y enviáselo al negocio. Se muestra UNA sola vez: después no se puede volver a ver (si lo perdés, revocá esta invitación y creá otra).</p>
+    <input type="text" id="enlaceUrl" class="enlace-caja" readonly>
+    <div class="acciones-modal">
+      <button type="button" class="btn btn-primary" id="btnCopiarEnlace">Copiar enlace</button>
+      <button type="button" class="btn" id="btnCerrarEnlace">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/auth.js"></script>
+<script src="../assets/js/nav.js"></script>
+<script>
+  requireAuth('../index.html');
+  renderNav('solicitudes', '../');
+</script>
+<script src="solicitudes.js"></script>
+</body>
+</html>
