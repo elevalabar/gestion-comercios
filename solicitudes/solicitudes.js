@@ -4,7 +4,7 @@
 // script del diagnóstico. Solo muestra datos si la sesión del panel es válida:
 // el script de Solicitudes se lo consulta al script del panel.
 //
-// Acciones: panelListar · panelDetalle · panelCrear · panelRevocar · panelExtender · panelReabrir
+// Acciones: panelListar · panelDetalle · panelCrear · panelRevocar · panelExtender · panelReabrir · panelEliminar (solo Prueba)
 // ─────────────────────────────────────────────
 
 const SOLICITUDES_API_URL = 'https://script.google.com/macros/s/AKfycbxKzJlhH59wylg9LX7xW_WbaR_eoOMd0ZT5KQa8pGOj80CPqpS8twSopnyPe0sU-oSdkw/exec';
@@ -235,6 +235,7 @@ function renderDetalle(d) {
     acc.push('<button type="button" class="btn" data-acc="revocar">Revocar enlace</button>');
   }
   if (s.estado === 'Enviada') acc.push('<button type="button" class="btn" data-acc="reabrir">Reabrir para editar</button>');
+  if (s.tipo === 'Prueba') acc.push('<button type="button" class="btn" data-acc="eliminar" style="color: var(--danger);">Eliminar (prueba)</button>');
   el('drawerAcciones').innerHTML = acc.join('');
   el('drawerAcciones').querySelectorAll('button').forEach(b => b.addEventListener('click', () => accionDrawer(b.dataset.acc)));
 }
@@ -253,6 +254,10 @@ async function accionDrawer(acc) {
   } else if (acc === 'reabrir') {
     if (!window.confirm('¿Reabrir ' + id + '? El cliente podrá volver a editar y enviar con su mismo enlace.')) return;
     accion = 'panelReabrir';
+  } else if (acc === 'eliminar') {
+    const escrito = window.prompt('Se borran para siempre las respuestas y autorizaciones de ' + id + '.\nPara confirmar, escribí su número (' + id + '):');
+    if (escrito === null) return;
+    accion = 'panelEliminar'; extra.confirmar = escrito.trim();
   } else return;
 
   ocultarError('msgDrawer');
@@ -261,6 +266,7 @@ async function accionDrawer(acc) {
     const res = await apiSolicitudes(accion, extra);
     if (!res.ok) { mostrarError('msgDrawer', mensajeError(res)); el('drawerAcciones').querySelectorAll('button').forEach(b => { b.disabled = false; }); return; }
     await cargar();
+    if (accion === 'panelEliminar') { cerrarDrawer(); return; }
     abrirDrawer(id);
   } catch (e) {
     mostrarError('msgDrawer', 'No se pudo conectar con el servidor.');
