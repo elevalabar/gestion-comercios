@@ -90,7 +90,7 @@ button:disabled, .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .btn-block { width: 100%; }
@@ -139,3 +139,10 @@ button:disabled, .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .gap-sm { gap: 8px; }
 .gap-md { gap: 14px; }
 .oculto { display: none !important; }
+
+/* Texto sobre fondos de acento: el acento ahora es dorado, así que el texto se toma de --on-accent.
+   (Se sube la especificidad con "html" para ganarles a los estilos propios de cada página sin tocar esos archivos.) */
+html .btn-principal,
+html .foto-item .badge-portada,
+html .campo-con-link .link-abrir,
+html .item-bloque.actual .marca { color: var(--on-accent); }
