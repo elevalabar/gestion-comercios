@@ -13,6 +13,7 @@ let TODAS = [];
 let COMERCIOS = {};      // ID → Nombre (solo para mostrar)
 let BORRADOR = true;
 let ID_ABIERTO = null;
+let DETALLE_ABIERTO = null;   // último detalle cargado (para descargar el .txt)
 
 const el = id => document.getElementById(id);
 
@@ -186,6 +187,7 @@ function textoRespuesta(p) {
 }
 
 function renderDetalle(d) {
+  DETALLE_ABIERTO = d;
   const s = d.solicitud;
   el('drawerNombre').textContent = s.nombre || '(nombre eliminado)';
   const comercio = nombreComercio(s.idComercio);
@@ -235,14 +237,93 @@ function renderDetalle(d) {
     acc.push('<button type="button" class="btn" data-acc="extender">Extender vencimiento</button>');
     acc.push('<button type="button" class="btn" data-acc="revocar">Revocar enlace</button>');
   }
+  if (s.estado === 'Enviada') acc.push('<button type="button" class="btn btn-primary" data-acc="descargar">Descargar respuestas (.txt)</button>');
   if (s.estado === 'Enviada') acc.push('<button type="button" class="btn" data-acc="reabrir">Reabrir para editar</button>');
   if (s.tipo === 'Prueba') acc.push('<button type="button" class="btn" data-acc="eliminar" style="color: var(--danger);">Eliminar (prueba)</button>');
   el('drawerAcciones').innerHTML = acc.join('');
   el('drawerAcciones').querySelectorAll('button').forEach(b => b.addEventListener('click', () => accionDrawer(b.dataset.acc)));
 }
 
+// ── Descarga de las respuestas en .txt ──────────────────────────
+// Se arma en el navegador con el detalle que ya está abierto: no hace falta
+// ningún cambio en el script de Solicitudes.
+
+function nombreArchivoSeguro(texto) {
+  return String(texto || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 50);
+}
+
+function armarTxt(d) {
+  const s = d.solicitud;
+  const comercio = nombreComercio(s.idComercio);
+  const linea = '='.repeat(60);
+  const sub = '-'.repeat(60);
+  const out = [];
+
+  out.push(linea);
+  out.push('PROYECTO: ' + (s.nombre || '(sin nombre)'));
+  out.push(linea);
+  out.push('Solicitud: ' + s.id);
+  out.push('Tipo: ' + s.tipo);
+  if (comercio) out.push('Comercio del panel: ' + comercio);
+  out.push('Creada: ' + formatearFechaHora(s.creada));
+  out.push('Enviada: ' + formatearFechaHora(s.enviada));
+  out.push('Descargada: ' + formatearFechaHora(new Date().toISOString()));
+  out.push('');
+
+  (d.bloques || []).forEach(b => {
+    const preguntas = (b.preguntas || []).filter(p => p.activa || textoRespuesta(p));
+    if (!preguntas.length) return;
+    out.push(sub);
+    out.push(String(b.nombre || '').toUpperCase());
+    out.push(sub);
+    out.push('');
+    preguntas.forEach(p => {
+      out.push('P: ' + p.texto + (p.activa ? '' : ' (ya no aplica)'));
+      out.push('R: ' + (textoRespuesta(p) || '—'));
+      out.push('');
+    });
+  });
+
+  if ((d.autorizaciones || []).length) {
+    out.push(sub);
+    out.push('AUTORIZACIONES');
+    out.push(sub);
+    out.push('');
+    d.autorizaciones.forEach(a => {
+      out.push('Permiso: ' + a.permiso);
+      out.push('Respuesta: ' + a.respuesta + (a.nota ? ' — ' + a.nota : ''));
+      out.push('Estado: ' + a.estado + (a.fecha ? ' (' + formatearFecha(a.fecha) + ')' : ''));
+      out.push('');
+    });
+  }
+
+  return out.join('\n');
+}
+
+function descargarTxt() {
+  if (!DETALLE_ABIERTO || !DETALLE_ABIERTO.solicitud) return;
+  const s = DETALLE_ABIERTO.solicitud;
+  const nombre = nombreArchivoSeguro(s.nombre);
+  const archivo = s.id + (nombre ? '_' + nombre : '') + '.txt';
+  // \ufeff = marca UTF-8 para que acentos y ñ se vean bien en cualquier editor
+  const blob = new Blob(['\ufeff' + armarTxt(DETALLE_ABIERTO)], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = archivo;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 async function accionDrawer(acc) {
   if (!ID_ABIERTO) return;
+  if (acc === 'descargar') { descargarTxt(); return; }
   const id = ID_ABIERTO;
   let accion, extra = { id };
   if (acc === 'extender') {
