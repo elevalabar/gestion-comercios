@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Diagnóstico gratuito · Eleva Lab</title>
+<title>Diagnóstico gratuito · ElevaLab</title>
 <script>
   (function () {
     const tema = localStorage.getItem('eleva_theme') || 'dark';
@@ -12,6 +12,7 @@
 </script>
 <link rel="stylesheet" href="../assets/css/variables.css">
 <link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/barra-elevalab.css">
 <link rel="icon" type="image/png" href="../assets/img/logo.png">
 <style>
   :root { --sidebar-w: 280px; }
@@ -35,7 +36,7 @@
   #btnEmpezar { padding: 14px 32px; font-size: 15px; border-radius: 12px; }
 
   /* ── Layout general del wizard ───────────────────────────────── */
-  .app-wizard { display: flex; min-height: 100vh; }
+  .app-wizard { display: flex; min-height: calc(100vh - var(--barra-h, 0px)); }
 
   /* Sidebar fija (desktop) */
   .sidebar {
@@ -44,14 +45,10 @@
     display: flex; flex-direction: column; gap: 24px;
     position: sticky; top: 0; height: 100vh; overflow-y: auto;
   }
-  .sidebar-logo { display: flex; align-items: center; gap: 10px; }
-  .sidebar-logo img { width: 26px; height: 26px; border-radius: 8px; }
-  .sidebar-logo span { font-size: 13px; font-weight: 600; letter-spacing: .03em; }
-
   .sidebar-progreso .barra-avance { height: 7px; margin-bottom: 8px; }
   .progreso-texto { font-size: 12px; color: var(--text-secondary); }
 
-  .sidebar-bloques { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+  .sidebar-bloques { display: flex; flex-direction: column; gap: 2px; }
   .item-bloque {
     display: flex; align-items: center; gap: 10px; padding: 9px 10px;
     border-radius: 8px; font-size: 13px; color: var(--text-muted);
@@ -151,8 +148,6 @@
       display: flex; align-items: center; gap: 10px; padding: 14px 18px;
       border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-page); z-index: 5;
     }
-    .topbar-mobile img { width: 22px; height: 22px; border-radius: 6px; }
-    .topbar-mobile span { font-size: 12px; font-weight: 600; flex-shrink: 0; }
     .topbar-mobile .barra-avance { flex: 1; height: 6px; margin: 0; }
     .contenido-principal-inner { padding: 24px 16px 32px; }
     .encabezado-bloque h1 { font-size: 20px; }
@@ -192,8 +187,11 @@
 </head>
 <body>
 
+<div id="barra-elevalab" data-logo="../assets/img/logo.png" data-actual="diagnostico"></div>
+<div id="barra-saltar" tabindex="-1"></div>
+
 <div class="intro-pantalla" id="intro">
-  <img src="../assets/img/logo.png" alt="Eleva Lab" class="intro-logo">
+  <img src="../assets/img/logo.png" alt="ElevaLab" class="intro-logo">
   <h1>Diagnóstico gratuito para tu negocio 👋</h1>
   <p>
     Respondé estas preguntas y recibí un diagnóstico simple sobre tu presencia
@@ -211,10 +209,6 @@
 
 <div class="app-wizard oculto" id="wizard">
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <img src="../assets/img/logo.png" alt="Eleva Lab">
-      <span>ELEVA LAB</span>
-    </div>
     <div class="sidebar-progreso">
       <div class="barra-avance"><div class="relleno" id="relleno" style="width:0%"></div></div>
       <p class="progreso-texto" id="progresoTexto">0% completado</p>
@@ -225,8 +219,6 @@
 
   <main class="contenido-principal">
     <div class="topbar-mobile">
-      <img src="../assets/img/logo.png" alt="Eleva Lab">
-      <span>ELEVA LAB</span>
       <div class="barra-avance"><div class="relleno" id="rellenoMobile" style="width:0%"></div></div>
     </div>
 
@@ -266,6 +258,7 @@
   </div>
 </div>
 
+<script src="../assets/js/barra-elevalab.js"></script>
 <script src="../assets/js/api.js"></script>
 <script src="diagnostico.js"></script>
 </body>
