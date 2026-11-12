@@ -1,0 +1,77 @@
+/* ElevaLab · barra superior para las páginas públicas del diagnóstico
+   Reproduce la barra de elevalab.com.ar (misma estructura, colores y menú de celular) para que quien llega
+   desde la web principal sienta que sigue en el mismo sitio.
+   Es una COPIA PROPIA con prefijo «barra-»: no usa las variables del panel (que cambian con el tema claro/oscuro),
+   así que la barra se ve siempre oscura, igual que en la web principal.
+   Si cambia el aspecto de la barra de elevalab-web (assets/css/style.css), actualizar acá a mano.
+   Se usa junto con assets/js/barra-elevalab.js. No depende de ningún otro archivo de estilos. */
+
+:root { --barra-h: 68px; }
+
+.barra-skip {
+  position: absolute; left: 12px; top: -80px; z-index: 100;
+  background: #f2c14e; color: #111; padding: 12px 16px; font-weight: 700; border-radius: 8px;
+}
+.barra-skip:focus { top: 12px; }
+
+.barra-eleva {
+  --b-negro: #0b0b0d; --b-linea: #2b2b32; --b-texto: #efede8; --b-apagado: #a6a7b0; --b-oro: #f2c14e; --b-blanco: #ffffff;
+  position: relative; z-index: 40;
+  background: var(--b-negro); color: var(--b-texto); border-bottom: 1px solid var(--b-linea);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 16px; line-height: 1.6;
+}
+.barra-eleva *, .barra-eleva *::before, .barra-eleva *::after { box-sizing: border-box; }
+.barra-eleva a, .barra-eleva a:hover { text-decoration: none; }
+
+.barra-contenedor {
+  width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 20px;
+  min-height: var(--barra-h);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.barra-marca {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 48px;
+  font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: var(--b-blanco);
+}
+.barra-eleva .barra-marca img { display: block; width: 38px; height: 38px; border-radius: 50%; }
+.barra-marca b { color: var(--b-oro); font-weight: 700; }
+
+/* botón del menú (celular) */
+.barra-eleva .barra-btn-menu {
+  width: 48px; height: 48px; padding: 0; gap: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; color: var(--b-texto);
+  border: 1.5px solid var(--b-linea); border-radius: 12px; cursor: pointer;
+}
+.barra-eleva .barra-btn-menu:hover { border-color: var(--b-oro); opacity: 1; }
+
+/* enlaces: lista desplegable en celular, fila en computadora */
+.barra-enlaces {
+  display: none; position: absolute; left: 0; right: 0; top: 100%;
+  background: var(--b-negro); border-bottom: 1px solid var(--b-linea);
+  padding: 8px 20px 24px; box-shadow: 0 24px 40px rgba(0, 0, 0, .5);
+}
+.barra-enlaces.abierto { display: block; }
+.barra-eleva .barra-enlaces a {
+  display: flex; align-items: center; min-height: 56px;
+  font-size: 18px; font-weight: 600; color: var(--b-texto); border-bottom: 1px solid var(--b-linea);
+}
+.barra-eleva .barra-enlaces a[aria-current="page"] { color: var(--b-oro); }
+.barra-eleva .barra-enlaces a.barra-acceso { font-size: 15px; font-weight: 500; color: var(--b-apagado); }
+.barra-eleva .barra-enlaces a.barra-cta { margin-top: 20px; justify-content: center; border: 0; min-height: 52px; font-size: 16px; color: var(--b-oro); }
+
+.barra-eleva :focus-visible, .barra-skip:focus-visible { outline: 3px solid var(--b-oro); outline-offset: 3px; border-radius: 4px; }
+
+@media (min-width: 900px) {
+  .barra-eleva .barra-btn-menu { display: none; }
+  .barra-enlaces {
+    display: flex; position: static; align-items: center; gap: 4px;
+    background: transparent; border: 0; box-shadow: none; padding: 0;
+  }
+  .barra-eleva .barra-enlaces a { min-height: 44px; padding: 0 14px; font-size: 14.5px; font-weight: 500; border: 0; border-radius: 8px; }
+  .barra-eleva .barra-enlaces a:hover { color: var(--b-oro); }
+  .barra-eleva .barra-enlaces a.barra-acceso { font-size: 14px; margin-left: 10px; }
+  .barra-eleva .barra-enlaces a.barra-cta { margin: 0 0 0 10px; padding: 0 20px; border: 1.5px solid var(--b-oro); border-radius: 999px; font-weight: 700; }
+  .barra-eleva .barra-enlaces a.barra-cta:hover { background: rgba(242, 193, 78, .12); }
+}
